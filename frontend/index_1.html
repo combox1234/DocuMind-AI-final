@@ -1,0 +1,31 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>College Document System — Test UI</title>
+  <style>
+    body{font-family:Inter,system-ui,Segoe UI,Arial;margin:18px}
+    button{padding:10px 14px;margin:6px}
+    #log{white-space:pre-wrap;border:1px solid #ddd;padding:10px;height:260px;overflow:auto;background:#f9f9f9}
+    .file{border-bottom:1px solid #eee;padding:6px 0}
+  </style>
+</head>
+<body>
+  <h2>College Document System — Minimal Test UI</h2>
+
+  <div>
+    <button id="btn-process">Process incoming files</button>
+    <button id="btn-build">Build index</button>
+    <button id="btn-list">List files</button>
+  </div>
+
+  <h3>Server log / Response</h3>
+  <div id="log">Ready. Click "Process incoming files".</div>
+
+  <h3>Indexed files</h3>
+  <div id="files"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

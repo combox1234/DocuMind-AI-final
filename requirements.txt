@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-magic
+pdfplumber
+python-docx
+python-pptx
+pillow
+pytesseract
+pandas
+openpyxl
+sentence-transformers
+faiss-cpu
+pyyaml
+watchdog
