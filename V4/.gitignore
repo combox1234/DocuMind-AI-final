@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.mypy_cache/
+
+# Environments
+venv/
+.venv/
+env/
+.env
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Local data artifacts
+data/database/**
+data/database_backup/**
+data/extracted_images/**
+data/incoming/**
+data/sorted/**
+!data/**/.gitkeep
+
+# Logs / zips / models
+*.log
+*.zip
+models/*.bin
+models/*.pt

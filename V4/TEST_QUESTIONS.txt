@@ -1,0 +1,348 @@
+# Comprehensive Test Questions for DocuMind AI RAG System
+
+## Document Coverage & Organization
+
+This test suite validates:
+1. **ML_Neural_Networks.txt** - Deep learning, architectures, formulas
+2. **Software_Architecture.txt** - Design patterns, SOLID principles
+3. **REST_API_Design.txt** - API design, HTTP methods, status codes
+4. **Database_Design.txt** - Normalization, relationships, indexes
+5. **Cybersecurity_Guide.txt** - Web vulnerabilities, authentication, encryption
+
+---
+
+## Section 1: Machine Learning & Neural Networks
+
+### Beginner Level (Basic Recall)
+
+**Q1**: What is the purpose of activation functions in neural networks?
+**Expected Source**: ML_Neural_Networks.txt - Activation Functions section
+**Expected Answer**: Activation functions introduce non-linearity into the network, enabling it to learn complex patterns. Without them, stacking layers would still result in linear combinations.
+
+**Q2**: Name three common types of neural network architectures.
+**Expected Source**: ML_Neural_Networks.txt - Neural Network Architectures section
+**Expected Answer**: Convolutional Neural Networks (CNN), Recurrent Neural Networks (RNN), and Transformer networks are common architectures. Could also mention Feedforward, LSTM, or others.
+
+**Q3**: What is the backpropagation algorithm used for?
+**Expected Source**: ML_Neural_Networks.txt - Training section
+**Expected Answer**: Backpropagation computes gradients of the loss function with respect to each weight in the network, enabling the model to update weights to minimize error.
+
+### Intermediate Level (Understanding & Comparison)
+
+**Q4**: Compare RNN and CNN architectures. When would you use each?
+**Expected Source**: ML_Neural_Networks.txt - RNN vs CNN subsections
+**Expected Answer**: RNNs are suited for sequential data (time-series, text) with memory of previous inputs. CNNs excel at spatial data (images) with convolutional filters. Use RNNs for language, CNNs for vision.
+
+**Q5**: What is gradient vanishing and how does it affect deep networks?
+**Expected Source**: ML_Neural_Networks.txt - Training Challenges section
+**Expected Answer**: Gradient vanishing occurs when gradients become very small through backpropagation, preventing weight updates in early layers. Solutions include ReLU activation, batch normalization, or residual connections.
+
+**Q6**: Explain the difference between LSTM and GRU cells.
+**Expected Source**: ML_Neural_Networks.txt - LSTM/GRU subsection
+**Expected Answer**: Both address vanishing gradients in RNNs. GRU is simpler with fewer gates (reset, update) while LSTM has more gates (input, forget, output), making LSTM more expressive but GRU more efficient.
+
+### Advanced Level (Application & Analysis)
+
+**Q7**: How would you apply a Transformer model to machine translation? Include the role of attention mechanisms.
+**Expected Source**: ML_Neural_Networks.txt - Transformer Architecture section
+**Expected Answer**: Transformers use multi-head self-attention to capture relationships between words regardless of distance. For translation: encode source language, then decoder with cross-attention over encoder outputs generates target language one token at a time.
+
+**Q8**: Describe the optimization process for training a deep neural network, including learning rate scheduling and regularization techniques.
+**Expected Source**: ML_Neural_Networks.txt - Optimization Algorithms section
+**Expected Answer**: Start with learning rate schedule (decay over time), use optimizers like Adam (adaptive learning rates), apply L1/L2 regularization to prevent overfitting, use batch normalization for stability, implement early stopping based on validation loss.
+
+**Q9**: A model shows high training accuracy but low validation accuracy. What techniques would you use to address this overfitting?
+**Expected Source**: ML_Neural_Networks.txt - Training section & Regularization
+**Expected Answer**: Increase L1/L2 regularization, use dropout layers, data augmentation, reduce model complexity, collect more training data, use early stopping, implement batch normalization.
+
+---
+
+## Section 2: Software Architecture & Design Patterns
+
+### Beginner Level
+
+**Q10**: What does the Single Responsibility Principle (SRP) mean?
+**Expected Source**: Software_Architecture.txt - SOLID Principles - SRP
+**Expected Answer**: A class should have only one reason to change, meaning each class should have one and only one responsibility. This makes code more modular and easier to test.
+
+**Q11**: What is the difference between inheritance and composition?
+**Expected Source**: Software_Architecture.txt - Best Practices section
+**Expected Answer**: Inheritance creates is-a relationships with a parent class. Composition creates has-a relationships by including objects. Composition is preferred as it's more flexible and avoids fragile base class problems.
+
+**Q12**: Name and briefly describe three creational design patterns.
+**Expected Source**: Software_Architecture.txt - Creational Patterns section
+**Expected Answer**: 
+- Singleton: Ensures only one instance of a class exists
+- Factory: Creates objects without specifying exact classes
+- Builder: Constructs complex objects step by step
+
+### Intermediate Level
+
+**Q13**: Explain the Open/Closed Principle with a code example. Why is it important?
+**Expected Source**: Software_Architecture.txt - OCP section with code examples
+**Expected Answer**: Classes should be open for extension (add new functionality) but closed for modification (don't change existing code). This reduces risk of breaking existing code when adding features. Example: payment processors should accept new payment methods without modifying existing code.
+
+**Q14**: How does the Strategy pattern improve code flexibility?
+**Expected Source**: Software_Architecture.txt - Behavioral Patterns - Strategy section
+**Expected Answer**: Strategy encapsulates algorithms in separate classes, allowing selection at runtime. This avoids conditional branching and makes adding new algorithms easy without modifying existing code. Example: different sorting algorithms (QuickSort, MergeSort) can be swapped.
+
+**Q15**: Describe the Facade pattern and when you would use it.
+**Expected Source**: Software_Architecture.txt - Structural Patterns - Facade section
+**Expected Answer**: Facade provides a simplified interface to a complex subsystem of multiple interdependent classes. Use when: reducing complexity, decoupling clients from subsystem components, or organizing layered architectures.
+
+### Advanced Level
+
+**Q16**: Violating which SOLID principle would make the Observer pattern ineffective? Explain.
+**Expected Source**: Software_Architecture.txt - Observer pattern & Dependency Inversion Principle
+**Expected Answer**: Violating Dependency Inversion would be problematic. Observer depends on abstractions (interfaces), not concrete implementations. If observers are tightly coupled to concrete subjects, adding new observer types becomes difficult.
+
+**Q17**: Compare Repository pattern with Active Record pattern. What are trade-offs?
+**Expected Source**: Software_Architecture.txt - Repository Pattern section
+**Expected Answer**: 
+- Repository: Centralizes data access logic, easier to test, better separation of concerns, more code overhead
+- Active Record: Model contains its own persistence logic, simpler for CRUD, tighter coupling to database
+Repository preferred for complex domains; Active Record for simple CRUD applications.
+
+---
+
+## Section 3: REST API Design
+
+### Beginner Level
+
+**Q18**: What HTTP method should be used to create a new resource? What status code indicates successful creation?
+**Expected Source**: REST_API_Design.txt - HTTP Methods table & Status Codes
+**Expected Answer**: POST should be used to create resources. Status code 201 (Created) indicates successful creation. The response should include a Location header with the new resource URL.
+
+**Q19**: What is the difference between PUT and PATCH?
+**Expected Source**: REST_API_Design.txt - HTTP Methods section
+**Expected Answer**: PUT replaces the entire resource (all fields required), while PATCH performs a partial update (only specified fields updated). PUT is idempotent; PATCH may not be.
+
+**Q20**: What status code should be returned when a client sends invalid data?
+**Expected Source**: REST_API_Design.txt - Status Codes 4xx section
+**Expected Answer**: 400 (Bad Request) for malformed requests, or 422 (Unprocessable Entity) for validation errors. Include detailed error information in response body.
+
+### Intermediate Level
+
+**Q21**: Design a REST endpoint structure for a blog API with users and posts. Include proper HTTP methods and status codes.
+**Expected Source**: REST_API_Design.txt - Resource-Oriented Design & Nested Resources
+**Expected Answer**:
+- GET /api/v1/users - List users (200)
+- POST /api/v1/users - Create user (201)
+- GET /api/v1/users/{id} - Get user (200)
+- GET /api/v1/users/{id}/posts - Get user's posts (200)
+- POST /api/v1/users/{id}/posts - Create post (201)
+- DELETE /api/v1/posts/{id} - Delete post (204)
+
+**Q22**: Explain pagination best practices for APIs returning large datasets.
+**Expected Source**: REST_API_Design.txt - Filtering, Sorting, Pagination section
+**Expected Answer**: Use query parameters (page, per_page/limit), return metadata (total, page count), include HATEOAS links (first, next, prev, last). Example: GET /api/users?page=2&per_page=20
+
+**Q23**: What security headers should an API implement and why?
+**Expected Source**: REST_API_Design.txt - Security section
+**Expected Answer**: X-Frame-Options (prevent clickjacking), X-Content-Type-Options (prevent MIME sniffing), Content-Security-Policy (restrict resources), Authorization header (authentication), HTTPS only.
+
+### Advanced Level
+
+**Q24**: A client requests paginated results with 10,000+ records. Why is offset-based pagination problematic? What's the alternative?
+**Expected Source**: REST_API_Design.txt - Database Pagination optimization (keyset pagination mention)
+**Expected Answer**: Offset pagination scans and skips rows, becoming slow with large offsets. Keyset (cursor-based) pagination is better: select where id > last_id limit 10, avoiding full scans and providing stable cursors across updates.
+
+**Q25**: Design error response format and explain versioning strategy.
+**Expected Source**: REST_API_Design.txt - Error Response & Versioning sections
+**Expected Answer**:
+Error format (JSON:API): { "errors": [{ "status": 422, "code": "VALIDATION_ERROR", "detail": "Email invalid" }] }
+Versioning: URL path (/api/v1, /api/v2) most common, or Accept header (application/vnd.example.v1+json). Path versioning clearer for browser testing.
+
+---
+
+## Section 4: Database Design
+
+### Beginner Level
+
+**Q26**: What does ACID mean and why is it important for databases?
+**Expected Source**: Database_Design.txt - ACID Properties section
+**Expected Answer**: Atomicity (all or nothing), Consistency (valid→valid), Isolation (concurrent transactions), Durability (survives failures). Critical for data integrity, especially financial/transactional systems.
+
+**Q27**: What is a primary key and why is it necessary?
+**Expected Source**: Database_Design.txt - Database Fundamentals
+**Expected Answer**: Primary key uniquely identifies each record, ensuring no duplicates. Essential for data integrity, joins, indexing, and referential integrity constraints.
+
+**Q28**: Explain the difference between one-to-many and many-to-many relationships with examples.
+**Expected Source**: Database_Design.txt - Schema Design Patterns
+**Expected Answer**:
+- One-to-many: One user → Many posts (foreign key in posts table)
+- Many-to-many: Many students ↔ Many courses (junction table: enrollments)
+
+### Intermediate Level
+
+**Q29**: Normalize this table to 3NF. Explain each step.
+**Expected Source**: Database_Design.txt - Normalization 1NF/2NF/3NF sections
+**Example Table**:
+```
+order_id | customer_id | customer_name | product_id | product_name | supplier | supplier_phone
+1        | 101         | John          | 201        | Laptop       | TechCo   | 555-1234
+```
+
+**Expected Answer**:
+- 1NF: Atomic values only (already satisfied)
+- 2NF: Remove non-key dependencies. customer_name depends only on customer_id → separate customers table; product_name, supplier depend on product_id → separate products table
+- 3NF: Remove transitive dependencies. supplier_phone depends on supplier (non-key) → separate suppliers table
+
+Final design:
+- orders: order_id, customer_id, product_id
+- customers: customer_id, customer_name
+- products: product_id, product_name, supplier_id
+- suppliers: supplier_id, supplier_name, supplier_phone
+
+**Q30**: When should you create indexes? What types of indexes exist?
+**Expected Source**: Database_Design.txt - Indexing Strategy & Index Types
+**Expected Answer**: Index columns in WHERE, JOIN, ORDER BY, foreign keys, high cardinality. Types: single-column, composite, unique, full-text. Avoid: low cardinality (bool), NULL-heavy columns, frequently updated columns.
+
+**Q31**: Explain the N+1 query problem and solution.
+**Expected Source**: Database_Design.txt - Query Optimization - N+1 Problem
+**Expected Answer**: N+1: 1 query for collection + N queries for each item's relation. Solution: Use JOIN to fetch all data in 1 query, or eager loading (ORM), or batch loading.
+
+### Advanced Level
+
+**Q32**: Design a database for an e-commerce platform with users, products, orders, and reviews. Include all relationships and constraints.
+**Expected Source**: Database_Design.txt - Schema Design Patterns (all subsections)
+**Expected Answer**:
+Tables needed:
+- users (id PK, email UNIQUE, password_hash)
+- products (id PK, name, price, category)
+- orders (id PK, user_id FK, created_at, status)
+- order_items (id PK, order_id FK, product_id FK, quantity, unit_price)
+- reviews (id PK, product_id FK, user_id FK, rating, review_text, created_at)
+With proper constraints: NOT NULL on essentials, FOREIGN KEY relationships, indexes on user_id/product_id for joins.
+
+**Q33**: A system must track user actions (view, purchase, review). How would you design audit logging?
+**Expected Source**: Database_Design.txt - Audit Trail section
+**Expected Answer**: Create audit_log table with columns: id, table_name, record_id, action (INSERT/UPDATE/DELETE), old_values (JSON), new_values (JSON), changed_by (user_id FK), changed_at (timestamp). Use triggers to auto-log changes. Allows full change history and rollback capability.
+
+---
+
+## Section 5: Cybersecurity
+
+### Beginner Level
+
+**Q34**: What is SQL Injection and how do you prevent it?
+**Expected Source**: Cybersecurity_Guide.txt - SQL Injection subsection
+**Expected Answer**: Attacker inserts SQL code into input fields. Prevention: Use parameterized queries (prepared statements), ORM tools, input validation, least privilege database accounts.
+
+**Q35**: What should you never do with user passwords?
+**Expected Source**: Cybersecurity_Guide.txt - Sensitive Data Exposure & Authentication sections
+**Expected Answer**: Never store plain text, never use weak hashing (MD5), never log passwords, never send over HTTP, never reuse hashes for multiple users.
+
+**Q36**: What is Cross-Site Scripting (XSS) and how is it prevented?
+**Expected Source**: Cybersecurity_Guide.txt - XSS section
+**Expected Answer**: Attacker injects JavaScript in user input, executed in victim's browser. Prevention: HTML escape output, use Content Security Policy, validate input, use templating engines with auto-escape.
+
+### Intermediate Level
+
+**Q37**: Explain the difference between SQL Injection and Command Injection. Give examples of each.
+**Expected Source**: Cybersecurity_Guide.txt - Injection section
+**Expected Answer**:
+- SQL Injection: Input manipulates SQL queries. Example: `email' OR '1'='1`
+- Command Injection: Input manipulates shell commands. Example: `; rm -rf /` in file name
+Prevention: Parameterized queries for SQL, escapeshellcmd() or use libraries for commands.
+
+**Q38**: What is CSRF and how do CSRF tokens prevent it?
+**Expected Source**: Cybersecurity_Guide.txt - CSRF section
+**Expected Answer**: CSRF exploits authenticated users (tricky form on attacker site executes action on target). Tokens: server generates unique token per session, included in form, server validates. Attacker can't predict token.
+
+**Q39**: Compare different authentication methods. When use each?
+**Expected Source**: Cybersecurity_Guide.txt - Authentication & API Key/Bearer/OAuth sections
+**Expected Answer**:
+- API Key: Public APIs, simple but not revocable. Use for non-sensitive operations.
+- Bearer Token (JWT): Stateless, good for mobile. Use for REST APIs.
+- OAuth 2.0: Third-party auth, delegation. Use for social logins.
+- Basic Auth: Username:password base64. Only over HTTPS.
+
+### Advanced Level
+
+**Q40**: Design a secure login system including MFA, rate limiting, and session management.
+**Expected Source**: Cybersecurity_Guide.txt - Authentication Best Practices & MFA section
+**Expected Answer**:
+1. Hash password with Argon2 or bcrypt (salt auto-included)
+2. Rate limit: max 5 attempts per minute per IP
+3. MFA: TOTP (Time-based OTP) with QR code setup
+4. Session: httpOnly cookie (no JS access), Secure flag (HTTPS only), SameSite=Strict
+5. Log all login attempts (security audit)
+6. Implement JWT with short expiration (15 min access + refresh token)
+
+**Q41**: A web app stores credit card data. What are encryption, tokenization, and PCI-DSS compliance requirements?
+**Expected Source**: Cybersecurity_Guide.txt - Data Encryption & Best Practices
+**Expected Answer**:
+- Encryption: Use Fernet/AES for at-rest + TLS for transit
+- Tokenization: Replace credit card with token (external service), never store actual card
+- PCI-DSS: 12 requirements including encryption, access control, testing, incident procedures
+- Best: Use payment processor (Stripe, Square) rather than storing directly
+
+---
+
+## Section 6: Cross-Document Questions
+
+### Retrieval & Integration Tests
+
+**Q42**: How would you design a REST API for querying a machine learning model? Include error handling and pagination.
+**Expected Sources**: REST_API_Design.txt + ML_Neural_Networks.txt + Database_Design.txt + Cybersecurity_Guide.txt
+**Expected Answer**: 
+- POST /api/v1/predictions with query body (input data)
+- Use async jobs for long-running models (202 Accepted)
+- Validate inputs, authenticate (Bearer token)
+- Paginate results if needed
+- Handle errors: 400 (invalid input), 503 (model unavailable)
+- Log predictions for audit trail
+- Encrypt sensitive data in transit (HTTPS)
+
+**Q43**: When building an API to store user-generated code (like Python snippets), what architecture and security patterns should you use?
+**Expected Sources**: Software_Architecture.txt (design patterns) + REST_API_Design.txt + Cybersecurity_Guide.txt
+**Expected Answer**:
+- Architecture: MVC with Repository pattern for code storage
+- API: POST /api/v1/users/{id}/code-snippets with code validation
+- Security: Authenticate all requests, sanitize/escape code output (XSS prevention), parameterized DB queries (SQL injection), rate limit uploads, scan for malware
+- Design patterns: Factory for different code parsers, Strategy for different language formatters
+
+**Q44**: You're designing a data pipeline: users upload files → classify → store. How would you handle database transactions, API design, and security?
+**Expected Sources**: All five documents
+**Expected Answer**:
+- Database: Use ACID transactions for atomicity. Foreign keys link users → uploads → classifications
+- API: POST /api/v1/uploads (202 Accepted for async), webhook callback when done
+- Security: Authenticate upload endpoint, validate file types (prevent malicious uploads), scan for viruses, encrypt files at rest, sanitize filenames
+- Architecture: Observer pattern for notifications, Repository pattern for persistence, Facade for pipeline orchestration
+
+**Q45**: A company needs to migrate their PHP application to Python Flask. Identify architectural, API, database, and security considerations from all five documents.
+**Expected Sources**: All five documents
+**Expected Answer**:
+- Architecture: Refactor to SOLID principles, use design patterns (Factory, Repository), separate concerns (MVC)
+- API: Redesign endpoints as RESTful (PUT/PATCH instead of /edit routes), use proper HTTP methods/status codes
+- Database: Normalize schema to 3NF, add proper indexes, implement audit logging
+- Security: Use parameterized queries, hash passwords with Argon2, implement rate limiting, add security headers, implement JWT for authentication
+
+---
+
+## Section 7: Difficulty Progression & Recommended Flow
+
+**Easy (Recall)**: Q1-3, Q10-12, Q18-20, Q26-28, Q34-36
+→ **Test Basic Understanding** (15-20 minutes)
+
+**Medium (Application)**: Q4-6, Q13-15, Q21-23, Q29-31, Q37-39
+→ **Test Applied Knowledge** (25-35 minutes)
+
+**Hard (Integration)**: Q7-9, Q16-17, Q24-25, Q32-33, Q40-41
+→ **Test Deep Understanding** (30-40 minutes)
+
+**Expert (Cross-Document)**: Q42-45
+→ **Test System Thinking** (40-60 minutes)
+
+---
+
+## Validation Metrics
+
+For each question:
+- **Accuracy**: Does response retrieve correct document sections?
+- **Relevance**: Are cited sources appropriate and complete?
+- **Completeness**: Does system capture nuances and edge cases?
+- **Source Attribution**: Correctly identifies document and section?
+
+Success = 85%+ accuracy on Q1-30, 70%+ on Q31-41, 60%+ on Q42-45

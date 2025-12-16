@@ -10,7 +10,7 @@ Intelligent document classification and analysis system using Retrieval Augmente
 - LLM-only classification
 - Baseline performance
 
-### V2 - Production RAG System
+### V2 - Production RAG System ⭐ (Current)
 - **60+ file type support** (5x increase)
   - Office: PDF, DOCX, PPTX, XLSX, ODS, ODP, RTF, EPUB, MD, CSV, JSON, TXT
   - Medical: DICOM, HL7, NIfTI, SVS, ECG
@@ -51,21 +51,6 @@ Intelligent document classification and analysis system using Retrieval Augmente
   - `core/llm.py` - Multi-strategy classification engine
   - `core/processor.py` - Document chunking and routing
   - `extractors/` - 20+ document format extractors
-
-### V4 - Production RAG System ⭐ (Current)
-- **Stability & Routing**
-  - Watcher monitors only `data/incoming/`; no recursive reprocessing
-  - Duplicate filename handling fixed; avoids cascading suffixes
-  - DB sync prunes stale chunks when files are removed/renamed
-  - Topic-based foldering (e.g., `Education/UAV/pptx`) for cleaner structure
-  - Education boosts for Database, Cybersecurity, REST, Software, ML, Data Science
-  - Presentation indicators to better route PPTX and slides
-- **UX**
-  - Read Aloud toggle in web UI (start/stop reliably)
-- **Answer Quality**
-  - Confidence floor raised when similarity > 0.3 to avoid 0% misreports
-- **Repo Hygiene**
-  - Lean `requirements.txt`; `.gitkeep` placeholders for empty runtime dirs; `.gitignore` excludes data artifacts
 
 ### V3 - Coming Soon
 - Advanced query understanding
@@ -112,18 +97,18 @@ See [COMPARISON.md](./COMPARISON.md) for detailed feature matrix across versions
 
 ## 📖 Documentation
 
-- **[V4/INSTALLATION_NEW.md](./V4/INSTALLATION_NEW.md)** - Detailed setup instructions
-- **[V4/SYSTEM_REQUIREMENTS.md](./V4/SYSTEM_REQUIREMENTS.md)** - System dependencies
-- **[V4/UBUNTU_INSTALLATION.md](./V4/UBUNTU_INSTALLATION.md)** - Linux-specific setup
-- **[V4/ARCHITECTURE.md](./V4/ARCHITECTURE.md)** - System architecture
-- **[V4/SUPPORTED_FILE_TYPES.md](./V4/SUPPORTED_FILE_TYPES.md)** - Complete file type list
-- **[V4/BACKEND_OPTIMIZATION.md](./V4/BACKEND_OPTIMIZATION.md)** - Optimization details
-- **[V4/PERFORMANCE_OPTIMIZATIONS.md](./V4/PERFORMANCE_OPTIMIZATIONS.md)** - Performance tuning
-- **[V4/GIT_GUIDE.md](./V4/GIT_GUIDE.md)** - Version control guide
+- **[V2/INSTALLATION_NEW.md](./V2/INSTALLATION_NEW.md)** - Detailed setup instructions
+- **[V2/SYSTEM_REQUIREMENTS.md](./V2/SYSTEM_REQUIREMENTS.md)** - System dependencies
+- **[V2/UBUNTU_INSTALLATION.md](./V2/UBUNTU_INSTALLATION.md)** - Linux-specific setup
+- **[V2/ARCHITECTURE.md](./V2/ARCHITECTURE.md)** - System architecture
+- **[V2/SUPPORTED_FILE_TYPES.md](./V2/SUPPORTED_FILE_TYPES.md)** - Complete file type list
+- **[V2/BACKEND_OPTIMIZATION.md](./V2/BACKEND_OPTIMIZATION.md)** - Optimization details
+- **[V2/PERFORMANCE_OPTIMIZATIONS.md](./V2/PERFORMANCE_OPTIMIZATIONS.md)** - Performance tuning
+- **[V2/GIT_GUIDE.md](./V2/GIT_GUIDE.md)** - Version control guide
 
 ## 🔧 Configuration
 
-Edit `V4/config.py` to customize:
+Edit `V2/config.py` to customize:
 - Ollama model and parameters
 - ChromaDB settings
 - File monitoring paths
@@ -132,7 +117,7 @@ Edit `V4/config.py` to customize:
 ## ✅ Testing
 
 ```bash
-cd V4
+cd V2
 python run_tests.py
 ```
 
@@ -170,21 +155,20 @@ This project is part of the Winter Internship program.
 ```
 winter_internship_project/
 ├── V1/                    # Original implementation
-├── V2/                    # Previous production
-├── V3/                    # Planned enhancements
-└── V4/                    # Production system (current)
-  ├── app.py
-  ├── watcher.py
-  ├── requirements.txt
-  ├── core/
-  ├── extractors/
-  ├── models/
-  ├── utils/
-  ├── templates/
-  ├── static/
-  ├── tests/
-  ├── data/
-  └── [documentation files]
+├── V2/                    # Production system (current)
+│   ├── app.py
+│   ├── watcher.py
+│   ├── requirements.txt
+│   ├── core/
+│   ├── extractors/
+│   ├── models/
+│   ├── utils/
+│   ├── templates/
+│   ├── static/
+│   ├── tests/
+│   ├── data/
+│   └── [documentation files]
+└── V3/                    # Planned enhancements
 
 ```
 
@@ -198,6 +182,6 @@ winter_internship_project/
 
 ---
 
-**Last Updated:** December 2025  
-**Status:** Production Ready (V4)  
+**Last Updated:** December 2024  
+**Status:** Production Ready (V2)  
 **Test Coverage:** 95%+ of core modules

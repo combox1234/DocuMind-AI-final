@@ -1,23 +1,17 @@
 # Version Comparison Matrix
 
-Detailed feature comparison across V1, V2, V3, and V4 versions.
+Detailed feature comparison across V1, V2, and planned V3 versions.
 
 ## 📋 Core Features
 
-| Feature | V1 | V2 | V3 | V4 |
-|---------|----|----|-----|----|
-| **Basic RAG** | ✅ | ✅ | ✅ | ✅ |
-| **Flask Web UI** | ✅ | ✅ | ✅ | ✅ |
-| **ChromaDB** | ✅ | ✅ | ✅ | ✅ |
-| **Ollama LLM** | ✅ | ✅ | ✅ | ✅ |
-| **File Monitoring** | ✅ | ✅ | ✅ | ✅ (stability+)
-| **REST API** | ❌ | ✅ | ✅+ | ✅ |
-
-### V4 Highlights
-- Stability: watcher observes only `incoming/`, duplicate naming fixed, DB sync removes stale chunks.
-- Organization: topic-based routing (e.g., `Education/UAV/pptx`), stronger Education boosts.
-- UX: Read Aloud toggle added; clean start scripts; lean requirements.
-- Confidence: raised floor when similarity > 0.3 to avoid misleading 0%.
+| Feature | V1 | V2 | V3 |
+|---------|----|----|-----|
+| **Basic RAG** | ✅ | ✅ | ✅ |
+| **Flask Web UI** | ✅ | ✅ | ✅ |
+| **ChromaDB** | ✅ | ✅ | ✅ |
+| **Ollama LLM** | ✅ | ✅ | ✅ |
+| **File Monitoring** | ✅ | ✅ | ✅ |
+| **REST API** | ❌ | ✅ | ✅+ |
 
 ## 📁 File Type Support
 
@@ -77,8 +71,6 @@ Detailed feature comparison across V1, V2, V3, and V4 versions.
 | **Response Quality** | Good | Excellent | Outstanding* |
 
 *V3 projections based on planned enhancements
-
-> Note (V4): Focused on correctness and stability improvements; response consistency and routing accuracy improved without changing model size.
 
 ### Startup & Operations
 
@@ -192,19 +184,19 @@ V2 → V3
 
 ## 📝 Summary
 
-| Aspect | V1 | V2 | V4 | Change |
-|--------|----|----|----|--------|
-| **File Formats** | 12 | 60+ | 60+ | **5x (vs V1)** |
-| **Classification Speed** | 2-5s | <10ms (85%) | <10ms (85%)+ | **250-500x (vs V1)** |
-| **Accuracy** | 85% | 95% | 95%+ (routing) | **+30% (vs V1)** |
-| **Response Speed** | Baseline | 22% faster | 22%+ stable | **+22% (vs V1)** |
-| **Startup Time** | 20-30s | ~5s | ~5s | **4-6x faster (vs V1)** |
-| **Test Coverage** | ~70% | 95%+ | 95%+ | **+25% (vs V1)** |
-| **Production Ready** | ⚠️ Beta | ✅ Ready | ✅ Ready | **Full** |
+| Aspect | V1 | V2 | Change |
+|--------|----|----|--------|
+| **File Formats** | 12 | 60+ | **5x** |
+| **Classification Speed** | 2-5s | <10ms (85%) | **250-500x** |
+| **Accuracy** | 85% | 95% | **+30%** |
+| **Response Speed** | Baseline | 22% faster | **+22%** |
+| **Startup Time** | 20-30s | ~5s | **4-6x faster** |
+| **Test Coverage** | ~70% | 95%+ | **+25%** |
+| **Production Ready** | ⚠️ Beta | ✅ Ready | **Full** |
 
 ---
 
-**V4 Status:** ✅ **Production Ready**  
+**V2 Status:** ✅ **Production Ready**  
 **Recommended For:** Enterprise deployment, production use, multi-format documents  
-**Next Version:** V3 (research roadmap) / V4.x (incremental)
+**Next Version:** V3 (planned Q1 2025)
 

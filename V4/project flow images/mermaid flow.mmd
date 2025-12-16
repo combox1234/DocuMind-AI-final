@@ -1,0 +1,36 @@
+---
+id: 2ea03aa0-8670-4800-b29f-70503c8b450a
+---
+graph LR
+    subgraph Frontend
+        A[HTML/CSS/JS]
+        B[TTS/Speech API]
+    end
+    
+    subgraph Backend
+        C[Flask]
+        D[Python 3.12]
+    end
+    
+    subgraph AI/ML
+        E[Ollama]
+        F[llama3.2]
+        G[ChromaDB]
+    end
+    
+    subgraph Extraction
+        H[PyPDF2]
+        I[Tesseract OCR]
+        J[SpeechRecognition]
+        K[python-docx]
+    end
+    
+    A --> C
+    C --> D
+    D --> E & G
+    E --> F
+    D --> H & I & J & K
+    
+    style E fill:#ff9800
+    style G fill:#9c27b0
+    style C fill:#2196f3
