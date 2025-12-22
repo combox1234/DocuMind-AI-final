@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>DocuMind AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ range(1, 1000000) | random }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>DocuMind AI</h1>
+    </header>
+
+    <main>
+        <div class="main-layout">
+            <div id="chat-container">
+                <div class="welcome-message">
+                    <h2>Welcome</h2>
+                    <p>Ask questions about your documents and get instant answers.</p>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="control-panel-header">
+                    <h3>Controls</h3>
+                </div>
+                <div class="control-panel-buttons">
+                    <button class="control-btn" id="tts-btn" title="Text-to-Speech">
+                        <span class="control-label">Read Aloud</span>
+                    </button>
+                    <button class="control-btn" id="history-btn-panel" title="View chat history">
+                        <span class="control-label">History</span>
+                    </button>
+                    <button class="control-btn" id="export-btn-panel" title="Export conversation">
+                        <span class="control-label">Export</span>
+                    </button>
+                    <button class="control-btn" id="clear-chat-btn" title="Clear chat window">
+                        <span class="control-label">Clear Chat</span>
+                    </button>
+                    <button class="control-btn" id="settings-btn" title="Settings">
+                        <span class="control-label">Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+
+        <div id="toast-container"></div>
+
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="query-input" 
+                placeholder="Ask a question about your documents..."
+                autocomplete="off"
+            >
+            <button id="send-btn">Send</button>
+        </div>
+    </main>
+
+    <!-- Chat History Modal -->
+    <div id="history-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Chat History</h2>
+            <div id="history-list"></div>
+            <div class="modal-actions">
+                <button id="clear-history-btn" class="btn-secondary">Clear History</button>
+                <button id="export-txt-btn" class="btn-primary">Export as Text</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Export Options</h2>
+            <p>Choose how to export your conversation:</p>
+            <div class="export-options">
+                <button id="export-txt-main" class="export-option">
+                    <span class="export-icon">📄</span>
+                    <span class="export-title">Export as Text</span>
+                    <span class="export-desc">Plain text format</span>
+                </button>
+                <button id="export-json-main" class="export-option">
+                    <span class="export-icon">📋</span>
+                    <span class="export-title">Export as JSON</span>
+                    <span class="export-desc">Structured data format</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Snippets Modal -->
+    <div id="snippets-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Source Snippets</h2>
+            <div id="snippets-list"></div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Settings</h2>
+            
+            <div class="settings-section">
+                <h3>Voice Settings</h3>
+                <div class="voice-control">
+                    <label for="voice-volume">Volume:</label>
+                    <input type="range" id="voice-volume" min="0" max="100" value="100" step="10">
+                    <span id="volume-value">100%</span>
+                </div>
+                <div class="voice-control">
+                    <label for="voice-rate">Speed:</label>
+                    <input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="0.9">
+                    <span id="rate-value">0.9x</span>
+                </div>
+                <div class="voice-control">
+                    <label for="voice-pitch">Pitch:</label>
+                    <input type="range" id="voice-pitch" min="0.5" max="2" step="0.1" value="1.0">
+                    <span id="pitch-value">1.0x</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Theme</h3>
+                <div class="theme-selector">
+                    <button class="theme-btn active" data-theme="dark">
+                        <span class="theme-name">Dark</span>
+                    </button>
+                    <button class="theme-btn" data-theme="moderate">
+                        <span class="theme-name">Moderate</span>
+                    </button>
+                    <button class="theme-btn" data-theme="light">
+                        <span class="theme-name">Light</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="reset-settings-btn" class="btn-secondary">Reset</button>
+                <button id="save-settings-btn" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const chatContainer = document.getElementById('chat-container');
+        const queryInput = document.getElementById('query-input');
+        const sendBtn = document.getElementById('send-btn');
+        const loading = document.getElementById('loading');
+        const historyBtn = document.getElementById('history-btn-panel');
+        const exportBtn = document.getElementById('export-btn-panel');
+        const ttsBtn = document.getElementById('tts-btn');
+        const clearChatBtn = document.getElementById('clear-chat-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const historyModal = document.getElementById('history-modal');
+        const snippetsModal = document.getElementById('snippets-modal');
+        const settingsModal = document.getElementById('settings-modal');
+
+        // State
+        let chatHistory = [];
+        let currentSnippets = [];
+        let settings = {
+            voiceVolume: 100,
+            voiceRate: 0.9,
+            voicePitch: 1.0,
+            theme: 'dark'
+        };
+        let ttsActive = false;
+        let currentUtterance = null;
+
+        // FUNCTION DEFINITIONS
+        function loadChatHistory() {
+            const stored = localStorage.getItem('docuMindChatHistory');
+            if (stored) chatHistory = JSON.parse(stored);
+        }
+
+        function saveChatHistory() {
+            localStorage.setItem('docuMindChatHistory', JSON.stringify(chatHistory));
+        }
+
+        function loadSettings() {
+            const stored = localStorage.getItem('docuMindSettings');
+            if (stored) {
+                settings = { ...settings, ...JSON.parse(stored) };
+                applySettings();
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('docuMindSettings', JSON.stringify(settings));
+        }
+
+        function applySettings() {
+            document.getElementById('voice-volume').value = settings.voiceVolume;
+            document.getElementById('voice-rate').value = settings.voiceRate;
+            document.getElementById('voice-pitch').value = settings.voicePitch;
+            document.getElementById('volume-value').textContent = settings.voiceVolume + '%';
+            document.getElementById('rate-value').textContent = settings.voiceRate.toFixed(1) + 'x';
+            document.getElementById('pitch-value').textContent = settings.voicePitch.toFixed(1) + 'x';
+            
+            document.body.className = 'theme-' + settings.theme;
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === settings.theme);
+            });
+        }
+
+        function showError(message) {
+            showToast(message, 'error');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function addMessage(text, sender, citedFiles = [], confidenceScore = null, sourceSnippets = []) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = sender === 'user' ? 'You' : 'Assistant';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.style.whiteSpace = 'pre-wrap';
+            content.textContent = text;
+
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(content);
+
+            if (sender === 'assistant' && confidenceScore !== null) {
+                const confDiv = document.createElement('div');
+                confDiv.className = 'confidence-indicator';
+                let color = confidenceScore >= 80 ? '#4CAF50' : confidenceScore >= 50 ? '#FFC107' : '#f44336';
+                confDiv.innerHTML = `<div class="conf-bar" style="width: ${confidenceScore}%; background: ${color};"></div><span>${confidenceScore}%</span>`;
+                content.appendChild(confDiv);
+            }
+
+            if (sender === 'assistant' && sourceSnippets && sourceSnippets.length > 0) {
+                const btnWrap = document.createElement('div');
+                btnWrap.className = 'snippet-actions';
+
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'snippet-btn speak-btn';
+                speakBtn.textContent = '🔊 Read';
+                speakBtn.onclick = () => {
+                    const txt = extractAssistantText(content);
+                    speakText(txt);
+                };
+
+                const srcBtn = document.createElement('button');
+                srcBtn.className = 'snippet-btn';
+                srcBtn.textContent = 'View Sources';
+                srcBtn.onclick = () => showSourceSnippets(sourceSnippets);
+
+                btnWrap.appendChild(speakBtn);
+                btnWrap.appendChild(srcBtn);
+                content.appendChild(btnWrap);
+            }
+
+            if (citedFiles && citedFiles.length > 0) {
+                const citedDiv = document.createElement('div');
+                citedDiv.className = 'cited-files';
+                const label = document.createElement('div');
+                label.className = 'cited-label';
+                label.textContent = 'Sources:';
+                citedDiv.appendChild(label);
+                citedFiles.forEach(filename => {
+                    const chip = document.createElement('span');
+                    chip.className = 'file-chip';
+                    chip.textContent = filename;
+                    chip.onclick = () => downloadFile(filename);
+                    citedDiv.appendChild(chip);
+                });
+                content.appendChild(citedDiv);
+            }
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            queryInput.value = '';
+            const welcomeMsg = document.querySelector('.welcome-message');
+            if (welcomeMsg) welcomeMsg.remove();
+
+            addMessage(query, 'user');
+            loading.classList.add('active');
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentSnippets = data.source_snippets || [];
+                    addMessage(data.answer, 'assistant', data.cited_files, data.confidence_score, data.source_snippets);
+                    chatHistory.push({ timestamp: new Date().toLocaleString(), sender: 'user', text: query });
+                    chatHistory.push({ timestamp: new Date().toLocaleString(), sender: 'assistant', text: data.answer, confidence_score: data.confidence_score });
+                    saveChatHistory();
+                    showToast('Response received', 'success');
+                } else {
+                    showError(data.error || 'Error occurred');
+                }
+            } catch (error) {
+                showError('Failed to connect to server');
+            } finally {
+                loading.classList.remove('active');
+                sendBtn.disabled = false;
+                queryInput.focus();
+            }
+        }
+
+        function showSourceSnippets(snippets) {
+            const list = document.getElementById('snippets-list');
+            list.innerHTML = '';
+            snippets.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'snippet-card';
+                div.innerHTML = `<h4>${s.filename}</h4><p>${s.text}</p>`;
+                list.appendChild(div);
+            });
+            snippetsModal.style.display = 'block';
+        }
+
+        function showHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = chatHistory.length ? '' : '<p>No history</p>';
+            chatHistory.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<strong>${msg.sender === 'user' ? 'You' : 'Assistant'}</strong><p>${msg.text.substring(0, 100)}</p>`;
+                list.appendChild(div);
+            });
+            historyModal.style.display = 'block';
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all chat history?')) {
+                chatHistory = [];
+                saveChatHistory();
+                showHistory();
+                showToast('History cleared', 'info');
+            }
+        }
+
+        function exportAsJSON() {
+            const data = JSON.stringify({ exported: new Date().toISOString(), history: chatHistory }, null, 2);
+            downloadBlob(new Blob([data], { type: 'application/json' }), 'chat_history.json');
+        }
+
+        function exportAsTXT() {
+            let content = 'DocuMind AI - Chat History\n' + new Date().toLocaleString() + '\n' + '='.repeat(50) + '\n\n';
+            chatHistory.forEach(msg => {
+                content += `[${msg.timestamp}] ${msg.sender}\n${msg.text}\n\n`;
+            });
+            downloadBlob(new Blob([content], { type: 'text/plain' }), 'chat_history.txt');
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            historyModal.style.display = 'none';
+        }
+
+        function downloadFile(filename) {
+            window.location.href = `/download/${encodeURIComponent(filename)}`;
+        }
+
+        function extractAssistantText(contentEl) {
+            if (!contentEl) return '';
+            let text = '';
+            for (let node of contentEl.childNodes) {
+                if (node.nodeType === Node.TEXT_NODE) text += node.textContent;
+            }
+            return text
+                .replace(/📊 Confidence:.*$/gm, '')
+                .replace(/📄 Sources:.*$/gm, '')
+                .trim();
+        }
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) {
+                showToast('Text-to-speech not supported in this browser', 'error');
+                return;
+            }
+            if (!text) {
+                showToast('No assistant message to read', 'warning');
+                return;
+            }
+            // Ensure any ongoing speech is stopped before starting new
+            try { window.speechSynthesis.cancel(); } catch {}
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = settings.voiceRate || 1;
+            utterance.pitch = settings.voicePitch || 1;
+            utterance.volume = (settings.voiceVolume || 100) / 100;
+            utterance.onstart = () => {
+                ttsActive = true;
+                ttsBtn.classList.add('active');
+                ttsBtn.querySelector('.control-label').textContent = 'Stop Reading';
+                showToast('Reading message...', 'info');
+            };
+            utterance.onerror = (event) => {
+                console.error('Speech error:', event);
+                showToast('Error reading message: ' + event.error, 'error');
+                ttsActive = false;
+                ttsBtn.classList.remove('active');
+                ttsBtn.querySelector('.control-label').textContent = 'Read Aloud';
+            };
+            utterance.onend = () => {
+                ttsActive = false;
+                ttsBtn.classList.remove('active');
+                ttsBtn.querySelector('.control-label').textContent = 'Read Aloud';
+            };
+
+            currentUtterance = utterance;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function speakLastMessage() {
+            console.log('Read Aloud button clicked');
+
+            // Prefer the last assistant message from chatHistory
+            let text = '';
+            for (let i = chatHistory.length - 1; i >= 0; i--) {
+                if (chatHistory[i].sender === 'assistant' && chatHistory[i].text?.trim()) {
+                    text = chatHistory[i].text.trim();
+                    break;
+                }
+            }
+
+            // Fallback to DOM if history is empty or missing
+            if (!text) {
+                const messages = document.querySelectorAll('.message.assistant .message-content');
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    text = extractAssistantText(lastMessage);
+                }
+            }
+
+            if (!text) {
+                showToast('No assistant message to read', 'warning');
+                return;
+            }
+
+            speakText(text);
+        }
+
+        function openSettings() {
+            applySettings();
+            settingsModal.style.display = 'block';
+        }
+
+        function clearChatWindow() {
+            if (confirm('Clear chat window?')) {
+                document.querySelectorAll('.message').forEach(m => m.remove());
+                chatContainer.innerHTML = '<div class="welcome-message"><h2>Welcome</h2><p>Ask questions about your documents.</p></div>';
+            }
+        }
+
+        // EVENT LISTENERS
+        sendBtn.addEventListener('click', sendMessage);
+        queryInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+        });
+
+        historyBtn.addEventListener('click', showHistory);
+        exportBtn.addEventListener('click', () => {
+            if (chatHistory.length === 0) { showError('No history to export'); return; }
+            const exportModal = document.getElementById('export-modal');
+            exportModal.style.display = 'block';
+        });
+        if (ttsBtn) {
+            ttsBtn.addEventListener('click', () => {
+                console.log('TTS button clicked');
+                // Toggle behavior: if active, stop; else start reading last assistant message
+                if (ttsActive) {
+                    try { window.speechSynthesis.cancel(); } catch {}
+                    ttsActive = false;
+                    ttsBtn.classList.remove('active');
+                    ttsBtn.querySelector('.control-label').textContent = 'Read Aloud';
+                    showToast('Stopped reading', 'info');
+                } else {
+                    speakLastMessage();
+                }
+            });
+        }
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => {
+                console.log('Clear chat button clicked');
+                clearChatWindow();
+            });
+        }
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                console.log('Settings button clicked');
+                openSettings();
+            });
+        }
+
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const modal = btn.closest('.modal');
+                if (modal) modal.style.display = 'none';
+            });
+        });
+
+        document.getElementById('clear-history-btn').addEventListener('click', clearHistory);
+        document.getElementById('export-txt-main').addEventListener('click', exportAsTXT);
+        document.getElementById('export-json-main').addEventListener('click', exportAsJSON);
+        document.getElementById('export-txt-btn').addEventListener('click', exportAsTXT);
+
+        document.getElementById('voice-volume').addEventListener('input', e => {
+            const value = parseInt(e.target.value);
+            document.getElementById('volume-value').textContent = value + '%';
+            settings.voiceVolume = value;
+            console.log('Volume changed to:', value);
+        });
+        document.getElementById('voice-rate').addEventListener('input', e => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('rate-value').textContent = value.toFixed(1) + 'x';
+            settings.voiceRate = value;
+            console.log('Rate changed to:', value);
+        });
+        document.getElementById('voice-pitch').addEventListener('input', e => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('pitch-value').textContent = value.toFixed(1) + 'x';
+            settings.voicePitch = value;
+            console.log('Pitch changed to:', value);
+        });
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            settings.voiceVolume = parseInt(document.getElementById('voice-volume').value);
+            settings.voiceRate = parseFloat(document.getElementById('voice-rate').value);
+            settings.voicePitch = parseFloat(document.getElementById('voice-pitch').value);
+            settings.theme = document.querySelector('.theme-btn.active').dataset.theme;
+            saveSettings();
+            applySettings();
+            settingsModal.style.display = 'none';
+            showToast('Settings saved', 'success');
+        });
+
+        const resetBtn = document.getElementById('reset-settings-btn');
+        console.log('Reset button element:', resetBtn);
+        console.log('Settings modal element:', settingsModal);
+        
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                console.log('Reset settings button clicked');
+                if (confirm('Reset all settings?')) {
+                    settings = { voiceVolume: 100, voiceRate: 0.9, voicePitch: 1.0, theme: 'dark' };
+                    saveSettings();
+                    applySettings();
+                    if (settingsModal) {
+                        settingsModal.style.display = 'none';
+                    } else {
+                        console.error('Settings modal not found');
+                    }
+                    showToast('Settings reset', 'info');
+                }
+            });
+        } else {
+            console.error('Reset button not found');
+        }
+
+        // Initialize
+        loadChatHistory();
+        loadSettings();
+    </script>
+</body>
+</html>
