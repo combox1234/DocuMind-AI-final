@@ -21,8 +21,6 @@ Async processing:
 - Celery worker consumes tasks from Redis and runs file processing separately from the web server and watcher.
 
 Key architecture artifacts:
-- Architecture generator script (Diagrams + Graphviz):  
-  [generate_architecture.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/generate_architecture.py)
 - Technical deep dive on RAG, retrieval/reranking, and external binaries:  
   [technical_deep_dive.md](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/technical_deep_dive.md)
 
