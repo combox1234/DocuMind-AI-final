@@ -246,35 +246,65 @@ chmod -R 755 data/
 
 ---
 
-### **Step 8: Run the Application**
+## Step 8: Run the Application
 
-#### **Option A: Run Web App Only**
+**⚠️ IMPORTANT: The system requires 3 terminals (Server + Celery Worker + Watcher)**
+
+#### **Option A: Quick Start (3 Terminals)**
 
 ```bash
 # Activate virtual environment (if not already)
 source venv/bin/activate
 
-# Start web application
-python3 app.py
+# Terminal 1: Production Server (Waitress)
+python serve.py
+# Server runs on http://0.0.0.0:5000
 
-# Open browser (if running with GUI)
+# Terminal 2 (new window): Celery Worker
+celery -A worker.celery_app worker --pool=solo -l info
+# Expected: "celery@hostname ready."
+
+# Terminal 3 (new window): File Watcher
+python watcher.py
+# Expected: "📁 Watching: /path/to/data/incoming"
+```
+
+**Open browser:**
+```bash
+# If running with GUI
 xdg-open http://localhost:5000
 
 # Or access from remote machine
 # http://<server-ip>:5000
 ```
 
-#### **Option B: Run File Watcher Only**
+#### **Option B: Run Using tmux (All 3 Components)**
+
+**Using Terminal Multiplexer (tmux):**
 
 ```bash
-# In another terminal (or use tmux/screen)
+# Install tmux if not installed
+sudo apt-get install -y tmux
+
+# Start tmux session
+tmux new -s rag-system
+
+# Pane 1: Server
 source venv/bin/activate
+python serve.py
 
-# Start file watcher
-python3 watcher.py
+# Split horizontally: Ctrl+B then "
+# Pane 2: Celery Worker
+source venv/bin/activate
+celery -A worker.celery_app worker --pool=solo -l info
 
-# Drop files into data/incoming/ folder
-# They will be automatically processed
+# Split vertically: Ctrl+B then %
+# Pane 3: Watcher  
+source venv/bin/activate
+python watcher.py
+
+# Detach: Ctrl+B then D
+# Reattach: tmux attach -t rag-system
 ```
 
 #### **Option C: Run Both (Recommended)**
@@ -332,25 +362,33 @@ python3 watcher.py
 **Using Background Processes:**
 
 ```bash
+# Create logs directory
+mkdir -p logs
+
 # Activate venv
 source venv/bin/activate
 
-# Run web app in background
-nohup python3 app.py > logs/app.log 2>&1 &
+# Run server in background
+nohup python serve.py > logs/server.log 2>&1 &
+
+# Run Celery worker in background  
+nohup celery -A worker.celery_app worker --pool=solo -l info > logs/celery.log 2>&1 &
 
 # Run watcher in background
-nohup python3 watcher.py > logs/watcher.log 2>&1 &
+nohup python watcher.py > logs/watcher.log 2>&1 &
 
 # Check processes
-ps aux | grep python3
+ps aux | grep python
 
 # View logs
-tail -f logs/app.log
+tail -f logs/server.log
+tail -f logs/celery.log  
 tail -f logs/watcher.log
 
 # Stop processes
-pkill -f "python3 app.py"
-pkill -f "python3 watcher.py"
+pkill -f "python serve.py"
+pkill -f "celery"
+pkill -f "python watcher.py"
 ```
 
 ---
@@ -365,22 +403,24 @@ ssh user@server-ip
 
 # Follow installation steps above
 
-# Run in background with nohup
+# Run all 3 components in background with nohup
 cd ~/projects/rag-system
 source venv/bin/activate
 
-# Start services
-nohup python3 app.py > app.log 2>&1 &
-nohup python3 watcher.py > watcher.log 2>&1 &
+# Start all services
+nohup python serve.py > server.log 2>&1 &
+nohup celery -A worker.celery_app worker --pool=solo -l info > celery.log 2>&1 &
+nohup python watcher.py > watcher.log 2>&1 &
 
 # Check status
-ps aux | grep python3
+ps aux | grep -E "serve.py|celery|watcher.py"
 
 # Access web interface from local machine
 # http://<server-ip>:5000
 
 # View logs
-tail -f app.log
+tail -f server.log
+tail -f celery.log
 tail -f watcher.log
 ```
 
@@ -399,14 +439,14 @@ sudo nano /etc/systemd/system/rag-webapp.service
 ```ini
 [Unit]
 Description=RAG System Web Application
-After=network.target ollama.service
+After=network.target ollama.service redis-server.service
 
 [Service]
 Type=simple
 User=YOUR_USERNAME
 WorkingDirectory=/home/YOUR_USERNAME/projects/rag-system
 Environment="PATH=/home/YOUR_USERNAME/projects/rag-system/venv/bin"
-ExecStart=/home/YOUR_USERNAME/projects/rag-system/venv/bin/python3 app.py
+ExecStart=/home/YOUR_USERNAME/projects/rag-system/venv/bin/python serve.py
 Restart=always
 RestartSec=10
 
@@ -432,6 +472,40 @@ sudo systemctl status rag-webapp
 sudo journalctl -u rag-webapp -f
 ```
 
+### **Systemd Service for Celery Worker:**
+
+```bash
+# Create service file
+sudo nano /etc/systemd/system/rag-celery.service
+```
+
+**Add content:**
+```ini
+[Unit]
+Description=RAG System Celery Worker
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/home/YOUR_USERNAME/projects/rag-system
+Environment="PATH=/home/YOUR_USERNAME/projects/rag-system/venv/bin"
+ExecStart=/home/YOUR_USERNAME/projects/rag-system/venv/bin/celery -A worker.celery_app worker --pool=solo -l info
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Enable and start:**
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable rag-celery
+sudo systemctl start rag-celery
+sudo systemctl status rag-celery
+```
+
 ### **Systemd Service for File Watcher:**
 
 ```bash
@@ -443,14 +517,14 @@ sudo nano /etc/systemd/system/rag-watcher.service
 ```ini
 [Unit]
 Description=RAG System File Watcher
-After=network.target ollama.service
+After=network.target rag-celery.service
 
 [Service]
 Type=simple
 User=YOUR_USERNAME
 WorkingDirectory=/home/YOUR_USERNAME/projects/rag-system
 Environment="PATH=/home/YOUR_USERNAME/projects/rag-system/venv/bin"
-ExecStart=/home/YOUR_USERNAME/projects/rag-system/venv/bin/python3 watcher.py
+ExecStart=/home/YOUR_USERNAME/projects/rag-system/venv/bin/python watcher.py
 Restart=always
 RestartSec=10
 
@@ -466,18 +540,26 @@ sudo systemctl start rag-watcher
 sudo systemctl status rag-watcher
 ```
 
-**Manage services:**
+**Manage all services:**
 ```bash
-# Stop services
+# Stop all services
 sudo systemctl stop rag-webapp
+sudo systemctl stop rag-celery
 sudo systemctl stop rag-watcher
 
-# Restart services
+# Start all services
+sudo systemctl start rag-webapp
+sudo systemctl start rag-celery
+sudo systemctl start rag-watcher
+
+# Restart all services
 sudo systemctl restart rag-webapp
+sudo systemctl restart rag-celery
 sudo systemctl restart rag-watcher
 
 # View logs
 sudo journalctl -u rag-webapp -n 50
+sudo journalctl -u rag-celery -n 50
 sudo journalctl -u rag-watcher -n 50
 ```
 
@@ -726,14 +808,19 @@ source venv/bin/activate
 # Install Python packages
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install waitress
 
 # Create data directories
 mkdir -p data/{incoming,sorted,database,database_backup}
 
 # Verify installation
-python3 -c "import flask, chromadb, ollama; print('✅ Installation complete!')"
+python3 -c "import flask, chromadb, ollama, celery, redis; print('✅ Installation complete!')"
 
-echo "✅ Setup complete! Run: source venv/bin/activate && python3 app.py"
+echo "✅ Setup complete!"
+echo "Run these 3 commands in separate terminals:"
+echo "  Terminal 1: source venv/bin/activate && python serve.py"
+echo "  Terminal 2: source venv/bin/activate && celery -A worker.celery_app worker --pool=solo -l info"
+echo "  Terminal 3: source venv/bin/activate && python watcher.py"
 ```
 
 **Run script:**
