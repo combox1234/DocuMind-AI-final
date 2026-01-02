@@ -102,12 +102,13 @@ class FileProcessor:
             logger.error(f"Error extracting text from {filepath}: {e}")
             return f"File: {filepath.name}"
     
-    def create_document(self, filepath: Path, text: str, category: str) -> Document:
-        """Create Document object"""
+    def create_document(self, filepath: Path, text: str, domain: str, category: str) -> Document:
+        """Create Document object with domain and category"""
         return Document(
             filename=filepath.name,
             filepath=filepath,
             file_hash=FileUtils.get_file_hash(filepath),
+            domain=domain,
             category=category,
             text_content=text,
             file_type=FileUtils.get_file_type(filepath),
@@ -128,6 +129,7 @@ class FileProcessor:
                 text=text,
                 chunk_index=i,
                 filename=document.filename,
+                domain=document.domain,  # Pass domain to chunk
                 category=document.category,
                 filepath=str(document.filepath)
             )
@@ -135,12 +137,18 @@ class FileProcessor:
         
         return chunks
 
-    def process_file(self, filepath: str, category: str) -> List[DocumentChunk]:
-        """Process a file and return chunks"""
+    def process_file(self, filepath: str, domain: str, category: str) -> List[DocumentChunk]:
+        """Process a file and return chunks
+        
+        Args:
+            filepath: Path to the file
+            domain: Classification domain (e.g., 'Technology', 'Education')
+            category: Classification category (e.g., 'UAV', 'Programming')
+        """
         try:
             file_path = Path(filepath)
             text = self.extract_text(file_path)
-            document = self.create_document(file_path, text, category)
+            document = self.create_document(file_path, text, domain, category)
             chunks = self.create_chunks(document)
             return chunks
         except Exception as e:

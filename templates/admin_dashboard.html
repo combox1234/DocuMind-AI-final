@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - DocuMind AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* All styles moved to static/css/style.css for unified theming */
+    </style>
+    <script>
+        // Apply theme immediately to prevent flash
+        (function () {
+            const savedSettings = localStorage.getItem('docuMindSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    if (settings.theme) {
+                        document.body.classList.add('theme-' + settings.theme);
+                    }
+                } catch (e) {
+                    console.error('Error loading theme:', e);
+                }
+            }
+        })();
+    </script>
+</head>
+
+<body>
+    <script>
+        // Strict Access Control
+        (function () {
+            const token = sessionStorage.getItem('access_token');
+            const role = sessionStorage.getItem('role');
+
+            if (!token) {
+                window.location.href = '/login';
+            } else if (role !== 'Admin') {
+                alert('⛔ Unauthorized Access: Admin privileges required.');
+                window.location.href = '/';
+            }
+        })();
+
+        // Apply theme immediately
+        (function () {
+            const saved = sessionStorage.getItem('docuMindSettings');
+            if (saved) {
+                try {
+                    const s = JSON.parse(saved);
+                    if (s.theme) document.body.classList.add('theme-' + s.theme);
+                } catch (e) { }
+            }
+        })();
+    </script>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <h2
+                style="font-size: 22px; font-weight: 700; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid rgba(102, 126, 234, 0.3); text-align: center;">
+                Admin Panel</h2>
+            <button class="nav-btn active" onclick="showSection('users')">Users</button>
+            <button class="nav-btn" onclick="showSection('roles')">Roles</button>
+            <button class="nav-btn" onclick="showSection('user-chats')">User Chats</button>
+            <div style="flex: 1;"></div> <!-- Spacer to push back button to bottom -->
+            <button class="btn-secondary" onclick="window.location.href='/'"
+                style="width: 100%; justify-content: flex-start; margin-top: auto;">
+                <span>←</span> Back to Chat
+            </button>
+        </aside>
+
+        <main class="content-area" id="users-section">
+            <div class="section-header">
+                <h2 style="font-size: 26px; font-weight: 700; margin: 0; text-align: center;">👥 User Management</h2>
+                <button class="btn-primary" onclick="openModal('new-user-modal')">+ Create User</button>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th style="width: 280px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    <!-- Loaded by JS -->
+                </tbody>
+            </table>
+        </main>
+
+        <main class="content-area" id="roles-section" style="display: none;">
+            <div class="section-header">
+                <h2 style="font-size: 26px; font-weight: 700; margin: 0; text-align: center;">🔑 Role Management</h2>
+                <button class="btn-primary" onclick="openModal('new-role-modal')">+ Create Role</button>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="roles-table-body">
+                    <!-- Loaded by JS -->
+                </tbody>
+            </table>
+        </main>
+
+        <!-- User Chats Section -->
+        <main class="content-area" id="user-chats-section" style="display: none;">
+            <div class="section-header">
+                <h2 style="font-size: 26px; font-weight: 700; margin: 0; text-align: center;">💬 User Chats</h2>
+            </div>
+            <div id="user-chats-container" style="padding: 20px;">
+                <!-- Loaded by JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- New User Modal -->
+    <div id="new-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('new-user-modal')">&times;</span>
+            <h2>Create New User</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="new-user-name" class="control-input" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="new-user-pass" class="control-input" placeholder="Enter password">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="new-user-role" class="control-input">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-secondary" onclick="closeModal('new-user-modal')">Cancel</button>
+                <button class="btn-primary" onclick="createUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="edit-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('edit-user-modal')">&times;</span>
+            <h2>Edit User Role</h2>
+            <input type="hidden" id="edit-user-id">
+            <p id="edit-user-name-display" style="margin-bottom: 20px; color: var(--text-secondary);"></p>
+            <div class="form-group">
+                <label>Select New Role</label>
+                <select id="edit-user-role" class="control-input">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-secondary" onclick="closeModal('edit-user-modal')">Cancel</button>
+                <button class="btn-primary" onclick="saveUserEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Role Modal -->
+    <div id="new-role-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('new-role-modal')">&times;</span>
+            <h2>Create New Role</h2>
+            <div class="form-group">
+                <label>Role Name</label>
+                <input type="text" id="new-role-name" class="control-input" placeholder="e.g., Teacher, Student">
+            </div>
+            <div class="form-group">
+                <label>Permissions</label>
+                <div class="permissions-grid" id="new-role-perms">
+                    <!-- Checkboxes -->
+                    <div class="permission-item"><input type="checkbox" id="perm-admin" value="admin.dashboard"><label
+                            for="perm-admin">Admin Dashboard</label></div>
+                    <div class="permission-item"><input type="checkbox" id="perm-files-upload"
+                            value="files.upload"><label for="perm-files-upload">Upload Files</label></div>
+                    <div class="permission-item"><input type="checkbox" id="perm-files-delete-all"
+                            value="files.delete.all"><label for="perm-files-delete-all">Delete Any File</label></div>
+                    <div class="permission-item"><input type="checkbox" id="perm-files-delete-own"
+                            value="files.delete.own"><label for="perm-files-delete-own">Delete Own Files</label></div>
+                    <div class="permission-item"><input type="checkbox" id="perm-files-sensitive"
+                            value="files.view.sensitive"><label for="perm-files-sensitive">View Sensitive Files</label>
+                    </div>
+                    <div class="permission-item"><input type="checkbox" id="perm-chat" value="chat.usage"><label
+                            for="perm-chat">Use Chat</label></div>
+                    <div class="permission-item"><input type="checkbox" id="perm-chat-delete"
+                            value="chat.delete.own"><label for="perm-chat-delete">Delete Own Chat</label></div>
+                </div>
+            </div>
+
+            <!-- File Access Permissions -->
+            <div class="form-group">
+                <label>File Access Permissions</label>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">Select which document
+                    domains this role can access</p>
+                <div class="permissions-grid" id="new-role-file-perms">
+                    <div class="permission-item"><input type="checkbox" id="file-perm-education"
+                            value="Education"><label for="file-perm-education">Education</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-college" value="College"><label
+                            for="file-perm-college">College</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-school" value="School"><label
+                            for="file-perm-school">School</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-healthcare"
+                            value="Healthcare"><label for="file-perm-healthcare">Healthcare</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-finance" value="Finance"><label
+                            for="file-perm-finance">Finance</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-company" value="Company"><label
+                            for="file-perm-company">Company</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-business" value="Business"><label
+                            for="file-perm-business">Business</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-technology"
+                            value="Technology"><label for="file-perm-technology">Technology</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-code" value="Code"><label
+                            for="file-perm-code">Code</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-legal" value="Legal"><label
+                            for="file-perm-legal">Legal</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-research"
+                            value="ResearchPaper"><label for="file-perm-research">Research Papers</label></div>
+                    <div class="permission-item"><input type="checkbox" id="file-perm-docs" value="Documentation"><label
+                            for="file-perm-docs">Documentation</label></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;">
+                <button class="btn-secondary" onclick="closeModal('new-role-modal')">Cancel</button>
+                <button class="btn-primary" onclick="createRole()">Create Role</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div id="edit-role-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('edit-role-modal')">&times;</span>
+            <h2>Edit Role</h2>
+            <input type="hidden" id="edit-role-id">
+            <div class="form-group">
+                <label>Role Name</label>
+                <input type="text" id="edit-role-name" class="control-input" placeholder="Role Name">
+            </div>
+            <div class="form-group">
+                <label>Permissions</label>
+                <div class="permissions-grid" id="edit-role-perms">
+                    <!-- Copied structure for edit checkboxes -->
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-admin"
+                            value="admin.dashboard"><label for="edit-perm-admin">Admin Dashboard</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-files-upload"
+                            value="files.upload"><label for="edit-perm-files-upload">Upload Files</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-files-delete-all"
+                            value="files.delete.all"><label for="edit-perm-files-delete-all">Delete Any File</label>
+                    </div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-files-delete-own"
+                            value="files.delete.own"><label for="edit-perm-files-delete-own">Delete Own Files</label>
+                    </div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-files-sensitive"
+                            value="files.view.sensitive"><label for="edit-perm-files-sensitive">View Sensitive
+                            Files</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-chat" value="chat.usage"><label
+                            for="edit-perm-chat">Use Chat</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-perm-chat-delete"
+                            value="chat.delete.own"><label for="edit-perm-chat-delete">Delete Own Chat</label></div>
+                </div>
+            </div>
+
+            <!-- File Access Permissions -->
+            <div class="form-group">
+                <label>File Access Permissions</label>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px;">Select which document
+                    domains this role can access</p>
+                <div class="permissions-grid" id="edit-role-file-perms">
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-education"
+                            value="Education"><label for="edit-file-perm-education">Education</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-college"
+                            value="College"><label for="edit-file-perm-college">College</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-school" value="School"><label
+                            for="edit-file-perm-school">School</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-healthcare"
+                            value="Healthcare"><label for="edit-file-perm-healthcare">Healthcare</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-finance"
+                            value="Finance"><label for="edit-file-perm-finance">Finance</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-company"
+                            value="Company"><label for="edit-file-perm-company">Company</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-business"
+                            value="Business"><label for="edit-file-perm-business">Business</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-technology"
+                            value="Technology"><label for="edit-file-perm-technology">Technology</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-code" value="Code"><label
+                            for="edit-file-perm-code">Code</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-legal" value="Legal"><label
+                            for="edit-file-perm-legal">Legal</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-research"
+                            value="ResearchPaper"><label for="edit-file-perm-research">Research Papers</label></div>
+                    <div class="permission-item"><input type="checkbox" id="edit-file-perm-docs"
+                            value="Documentation"><label for="edit-file-perm-docs">Documentation</label></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn-secondary" onclick="closeModal('edit-role-modal')">Cancel</button>
+                <button class="btn-primary" onclick="saveRoleEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-modal" onclick="closeModal('delete-confirm-modal')">&times;</span>
+            <h2 id="delete-modal-title">Confirm Delete</h2>
+            <p id="delete-modal-text" style="color: var(--text-secondary); margin-bottom: 24px;">Are you sure?</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="closeModal('delete-confirm-modal')">Cancel</button>
+                <button id="confirm-delete-btn" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change User Password Modal (Admin) -->
+    <div id="change-password-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeModal('change-password-modal')">&times;</span>
+            <h2 style="margin-bottom: 8px; font-size: 24px;">Change Password</h2>
+            <p id="change-password-username"
+                style="color: var(--text-secondary); margin-bottom: 28px; font-size: 14px;">User: </p>
+            <input type="hidden" id="change-password-user-id">
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 10px; color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                    New Password <span style="color: var(--text-secondary); font-weight: 400;">(minimum 6
+                        characters)</span>
+                </label>
+                <input type="password" id="new-password-input" class="form-input" placeholder="Enter new password"
+                    style="width: 100%; padding: 12px 16px; font-size: 14px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+
+            <div style="margin-bottom: 28px;">
+                <label
+                    style="display: block; margin-bottom: 10px; color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                    Confirm Password
+                </label>
+                <input type="password" id="confirm-password-input" class="form-input" placeholder="Re-enter password"
+                    style="width: 100%; padding: 12px 16px; font-size: 14px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-secondary" onclick="closeModal('change-password-modal')"
+                    style="padding: 10px 20px;">Cancel</button>
+                <button class="btn-primary" onclick="changeUserPassword()" style="padding: 10px 24px;">Save
+                    Password</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- View Chat Modal -->
+    <div id="view-chat-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px; height: 80vh; display: flex; flex-direction: column;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                <h2 id="view-chat-title" style="margin: 0; font-size: 20px;">Chat Details</h2>
+                <span class="close-modal" onclick="closeModal('view-chat-modal')"
+                    style="position: static;">&times;</span>
+            </div>
+            <div id="view-chat-content" style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                <!-- Messages loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container for Notifications -->
+    <div id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=2"></script>
+    <script>
+        // Admin Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            loadRoles();
+
+            // Restore active section
+            const activeSection = localStorage.getItem('adminActiveSection') || 'users';
+            console.log('Restoring section:', activeSection);
+            showSection(activeSection);
+        });
+
+
+        // Section Switching
+        function showSection(sectionName) {
+            console.log('[DEBUG] showSection called with:', sectionName);
+
+            // Save state
+            localStorage.setItem('adminActiveSection', sectionName);
+
+            // Hide all sections
+            const allSections = document.querySelectorAll('.content-area');
+            allSections.forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Deactivate all nav buttons
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // Show selected section
+            const sectionId = `${sectionName}-section`;
+            const section = document.getElementById(sectionId);
+
+            console.log('[DEBUG] Target section ID:', sectionId, 'Found:', !!section);
+
+            if (section) {
+                section.style.display = 'block';
+            }
+
+            // Activate button
+            const targetBtn = Array.from(buttons).find(b => {
+                const onclick = b.getAttribute('onclick');
+                return onclick && onclick.includes(`'${sectionName}'`);
+            });
+            if (targetBtn) targetBtn.classList.add('active');
+
+            // Load Data
+            if (sectionName === 'users') {
+                console.log('[DEBUG] Loading users...');
+                loadUsers();
+            } else if (sectionName === 'roles') {
+                console.log('[DEBUG] Loading roles...');
+                loadRoles();
+            } else if (sectionName === 'user-chats') {
+                console.log('[DEBUG] Loading user chats...');
+                loadUserChats();
+            }
+        }
+
+
+        // Global State for Modals
+        let currentDeleteAction = null;
+
+        async function loadUsers() {
+            try {
+                const res = await authFetch('/api/admin/users');
+                const users = await res.json();
+                const tbody = document.getElementById('users-table-body');
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td><span class="file-chip">${u.role_name}</span></td>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px; min-width: 60px;" onclick="openEditUserModal(${u.id}, '${u.username}', ${u.role_id})">Edit</button>
+                                <button class="btn-secondary" style="padding: 6px 12px; font-size: 13px; min-width: 120px; white-space: nowrap;" onclick="openChangePasswordModal(${u.id}, '${u.username}')">Change Password</button>
+                                <button class="btn-danger" style="padding: 6px 12px; font-size: 13px; min-width: 60px;" onclick="confirmDeleteUser(${u.id}, '${u.username}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load users:', e);
+            }
+        }
+
+        async function loadRoles() {
+            console.log('[DEBUG] loadRoles() called');
+            try {
+                console.log('[DEBUG] Fetching roles from API...');
+                const res = await authFetch('/api/admin/roles');
+                console.log('[DEBUG] Response status:', res.status);
+
+                const roles = await res.json();
+                console.log('[DEBUG] Roles received:', roles);
+
+                const tbody = document.getElementById('roles-table-body');
+                console.log('[DEBUG] tbody element:', tbody);
+
+                if (!tbody) {
+                    console.error('[ERROR] roles-table-body element not found!');
+                    showToast('UI Error: Cannot find roles table', 'error');
+                    return;
+                }
+
+                tbody.innerHTML = roles.map(r => {
+                    console.log('[DEBUG] Processing role:', r.name);
+                    return `
+                    <tr>
+                        <td>${r.id}</td>
+                        <td>${r.name}</td>
+                        <td>
+                            <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                ${r.permissions.map(p => `<span class="tag">${p}</span>`).join('')}
+                                ${r.file_permissions && r.file_permissions.allowed_domains ?
+                            `<br><small style="color: var(--text-secondary);">File Access: ${r.file_permissions.allowed_domains.join(', ')}</small>`
+                            : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                ${r.name !== 'Admin' ? `
+                                    <button class="btn-secondary" onclick='openEditRoleModal(${r.id}, "${r.name}", ${JSON.stringify(r.permissions)}, ${JSON.stringify(r.file_permissions || null)})'>Edit</button>
+                                    <button class="btn-danger" onclick="confirmDeleteRole(${r.id}, '${r.name}')">Delete</button>
+                                ` : '<span style="color: var(--text-muted); font-style: italic;">Protected</span>'}
+                            </div>
+                        </td>
+                    </tr>
+                `}).join('');
+
+                console.log('[DEBUG] Table HTML generated, rows:', roles.length);
+
+                // Populate User Role Dropdowns (Create & Edit)
+                const options = roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+                document.getElementById('new-user-role').innerHTML = options;
+                document.getElementById('edit-user-role').innerHTML = options;
+
+                console.log('[DEBUG] loadRoles() completed successfully');
+            } catch (e) {
+                console.error('[ERROR] Failed to load roles:', e);
+                showToast('Error loading roles: ' + e.message, 'error');
+            }
+        }
+
+
+
+        async function createUser() {
+            const username = document.getElementById('new-user-name').value.trim();
+            const password = document.getElementById('new-user-pass').value;
+            const role_id = parseInt(document.getElementById('new-user-role').value);
+
+            if (!username || !password) {
+                showToast('Please fill all fields', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role_id })
+                });
+
+                if (res.ok) {
+                    showToast('User created successfully!', 'success');
+                    closeModal('new-user-modal');
+                    document.getElementById('new-user-name').value = '';
+                    document.getElementById('new-user-pass').value = '';
+                    loadUsers();
+                } else {
+                    const data = await res.json();
+                    showToast('Error: ' + (data.error || 'Failed to create user'), 'error');
+                }
+            } catch (e) {
+                showToast('Connection error: ' + e.message, 'error');
+            }
+        }
+
+        async function createRole() {
+            const roleName = document.getElementById('new-role-name').value.trim();
+            const permCheckboxes = document.querySelectorAll('#new-role-perms input[type="checkbox"]:checked');
+            const permissions = Array.from(permCheckboxes).map(cb => cb.value);
+
+            if (!roleName) {
+                showToast('Please enter a role name', 'error');
+                return;
+            }
+            if (permissions.length === 0) {
+                showToast('Select at least one permission', 'error');
+                return;
+            }
+
+            // Collect file access permissions
+            const filePermCheckboxes = document.querySelectorAll('#new-role-file-perms input[type="checkbox"]:checked');
+            const allowedDomains = Array.from(filePermCheckboxes).map(cb => cb.value);
+            const filePermissions = allowedDomains.length > 0 ? { allowed_domains: allowedDomains } : null;
+
+            try {
+                const res = await authFetch('/api/admin/roles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: roleName,
+                        permissions,
+                        file_permissions: filePermissions
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('Role created successfully!', 'success');
+                    closeModal('new-role-modal');
+                    document.getElementById('new-role-name').value = '';
+                    document.querySelectorAll('#new-role-perms input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    document.querySelectorAll('#new-role-file-perms input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    loadRoles();
+                } else {
+                    const data = await res.json();
+                    showToast('Error: ' + (data.error || 'Failed to create role'), 'error');
+                }
+            } catch (e) {
+                showToast('Connection error: ' + e.message, 'error');
+            }
+        }
+
+        // --- EDIT USER LOGIC ---
+        function openEditUserModal(id, username, roleId) {
+            document.getElementById('edit-user-id').value = id;
+            document.getElementById('edit-user-name-display').textContent = `Editing user: ${username}`;
+            document.getElementById('edit-user-role').value = roleId;
+            openModal('edit-user-modal');
+        }
+
+        async function saveUserEdit() {
+            const userId = document.getElementById('edit-user-id').value;
+            const roleId = document.getElementById('edit-user-role').value;
+
+            try {
+                const res = await authFetch(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role_id: parseInt(roleId) })
+                });
+
+                if (res.ok) {
+                    showToast('User role updated!', 'success');
+                    closeModal('edit-user-modal');
+                    loadUsers();
+                } else {
+                    const data = await res.json();
+                    showToast('Error: ' + (data.error || 'Failed to update'), 'error');
+                }
+            } catch (e) {
+                showToast('Connection error: ' + e.message, 'error');
+            }
+        }
+
+        // Password Change Functions
+        function openChangePasswordModal(userId, username) {
+            document.getElementById('change-password-user-id').value = userId;
+            document.getElementById('change-password-username').textContent = `User: ${username}`;
+            document.getElementById('new-password-input').value = '';
+            document.getElementById('confirm-password-input').value = '';
+            openModal('change-password-modal');
+        }
+
+        async function changeUserPassword() {
+            const userId = document.getElementById('change-password-user-id').value;
+            const newPassword = document.getElementById('new-password-input').value;
+            const confirmPassword = document.getElementById('confirm-password-input').value;
+
+            // Validate
+            if (!newPassword) {
+                showToast('Please enter a new password', 'error');
+                return;
+            }
+            if (newPassword.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch(`/api/admin/users/${userId}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: newPassword })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(data.message || 'Password updated successfully', 'success');
+                    closeModal('change-password-modal');
+                } else {
+                    showToast(data.error || 'Failed to update password', 'error');
+                }
+            } catch (e) {
+                showToast('Error updating password', 'error');
+            }
+        }
+
+        // --- DELETE USER LOGIC ---
+        function confirmDeleteUser(id, username) {
+            currentDeleteAction = async () => {
+                try {
+                    const res = await authFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        showToast('User deleted successfully', 'success');
+                        loadUsers();
+                        closeModal('delete-confirm-modal');
+                    } else {
+                        const data = await res.json();
+                        showToast('Error: ' + (data.error || 'Failed to delete'), 'error');
+                    }
+                } catch (e) {
+                    showToast('Error: ' + e.message, 'error');
+                }
+            };
+
+            document.getElementById('delete-modal-title').textContent = 'Delete User';
+            document.getElementById('delete-modal-text').textContent = `Are you sure you want to delete "${username}"? This cannot be undone.`;
+            openModal('delete-confirm-modal');
+
+            // Unbind old listener and add new one
+            const btn = document.getElementById('confirm-delete-btn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', currentDeleteAction);
+        }
+
+        // --- EDIT ROLE LOGIC ---
+        function openEditRoleModal(id, name, permissions, filePermissions) {
+            document.getElementById('edit-role-id').value = id;
+            document.getElementById('edit-role-name').value = name;
+
+            // Clear all checkboxes
+            document.querySelectorAll('#edit-role-perms input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('#edit-role-file-perms input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+            // Check action permissions
+            permissions.forEach(perm => {
+                const checkbox = document.querySelector(`#edit-role-perms input[value="${perm}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+
+            // Check file permissions if exists
+            if (filePermissions && filePermissions.allowed_domains) {
+                filePermissions.allowed_domains.forEach(domain => {
+                    const checkbox = document.querySelector(`#edit-role-file-perms input[value="${domain}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+
+            openModal('edit-role-modal');
+        }
+
+        async function saveRoleEdit() {
+            const roleId = document.getElementById('edit-role-id').value;
+            const name = document.getElementById('edit-role-name').value.trim();
+            const permCheckboxes = document.querySelectorAll('#edit-role-perms input[type="checkbox"]:checked');
+            const permissions = Array.from(permCheckboxes).map(cb => cb.value);
+
+            if (!name) { showToast('Role name required', 'error'); return; }
+            if (permissions.length === 0) { showToast('Select at least one permission', 'error'); return; }
+
+            // Collect file permissions
+            const filePermCheckboxes = document.querySelectorAll('#edit-role-file-perms input[type="checkbox"]:checked');
+            const allowedDomains = Array.from(filePermCheckboxes).map(cb => cb.value);
+            const filePermissions = allowedDomains.length > 0 ? { allowed_domains: allowedDomains } : null;
+
+            try {
+                const res = await authFetch(`/api/admin/roles/${roleId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        permissions,
+                        file_permissions: filePermissions
+                    })
+                });
+                if (res.ok) {
+                    showToast('Role updated successfully', 'success');
+                    closeModal('edit-role-modal');
+                    loadRoles();
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to update role', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        }
+
+        // --- DELETE ROLE LOGIC ---
+        function confirmDeleteRole(id, name) {
+            currentDeleteAction = async () => {
+                try {
+                    const res = await authFetch(`/api/admin/roles/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        showToast('Role deleted successfully', 'success');
+                        loadRoles();
+                        closeModal('delete-confirm-modal');
+                    } else {
+                        const data = await res.json();
+                        showToast('Error: ' + (data.error || 'Failed to delete'), 'error');
+                    }
+                } catch (e) {
+                    showToast('Error: ' + e.message, 'error');
+                }
+            };
+
+            document.getElementById('delete-modal-title').textContent = 'Delete Role';
+            document.getElementById('delete-modal-text').textContent = `Delete role "${name}"? This will fail if users are assigned to it.`;
+            openModal('delete-confirm-modal');
+
+            const btn = document.getElementById('confirm-delete-btn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', currentDeleteAction);
+        }
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex'; // Flex for centering
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Close modal on outside click
+        window.onclick = function (event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // --- USER CHATS SECTION ---
+        async function loadUserChats() {
+            const container = document.getElementById('user-chats-container');
+            container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading...</p>';
+
+            try {
+                const res = await authFetch('/api/admin/chats/all');
+                const chats = await res.json();
+
+                if (!chats || chats.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No chat sessions found.</p>';
+                    return;
+                }
+
+                // Header
+                let html = `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User Name</th>
+                                <th>Chat Name</th>
+                                <th>Messages</th>
+                                <th>Date & Time</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Rows
+                chats.forEach(chat => {
+                    const date = new Date(chat.created_at).toLocaleString();
+                    html += `
+                        <tr>
+                            <td><strong style="color: var(--accent-color);">${chat.username}</strong></td>
+                            <td>${chat.title}</td>
+                            <td>—</td> 
+                            <td style="font-size: 13px; color: var(--text-secondary);">${date}</td>
+                            <td>
+                                <button class="btn-primary" style="padding: 6px 12px; font-size: 13px;" onclick="viewChat('${chat.id}', '${chat.title}')">View</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+
+            } catch (e) {
+                console.error('Failed to load user chats:', e);
+                container.innerHTML = '<p style="text-align: center; color: var(--error);">Failed to load chats</p>';
+            }
+        }
+
+        async function viewChat(chatId, title) {
+            // Open Modal
+            const modal = document.getElementById('view-chat-modal');
+            const contentDiv = document.getElementById('view-chat-content');
+            const titleEl = document.getElementById('view-chat-title');
+
+            titleEl.textContent = title;
+            contentDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
+            modal.style.display = 'flex';
+
+            try {
+                const res = await authFetch(`/api/chats/${chatId}/messages`);
+                const messages = await res.json();
+
+                if (!messages || messages.length === 0) {
+                    contentDiv.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No messages in this chat.</p>';
+                    return;
+                }
+
+                let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+                messages.forEach(msg => {
+                    const isUser = msg.sender === 'user';
+                    const align = isUser ? 'flex-end' : 'flex-start';
+                    const bg = isUser ? 'var(--message-user-bg)' : 'var(--bg-glass-strong)';
+                    const color = isUser ? 'white' : 'var(--text-primary)';
+                    const label = isUser ? 'User' : 'Assistant';
+
+                    html += `
+                        <div style="align-self: ${align}; max-width: 80%;">
+                            <div style="font-size: 11px; margin-bottom: 4px; color: var(--text-secondary); text-align: ${isUser ? 'right' : 'left'};">${label}</div>
+                            <div style="padding: 12px 16px; border-radius: 12px; background: ${bg}; color: ${color}; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                                ${msg.text}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                contentDiv.innerHTML = html;
+
+            } catch (e) {
+                console.error('Failed to load messages:', e);
+                contentDiv.innerHTML = '<p style="color: var(--error);">Error loading messages.</p>';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
---ver@echo off
+@echo off
 echo ========================================
 echo Universal RAG System - Web App
 echo ========================================

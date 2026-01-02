@@ -1,32 +1,123 @@
-# Virtual environment
+# ============================================
+# Python Virtual Environment
+# ============================================
 venv/
+env/
+ENV/
+.Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.so
 .Python
+pip-log.txt
+pip-delete-this-directory.txt
 
-# IDE
+# ============================================
+# IDE & Editor Files
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Data directories
-data/incoming/*
-data/sorted/*
-data/database/*
-
-# Logs
-*.log
-
-# OS
+*~
 .DS_Store
 Thumbs.db
 
-# Temporary files
-*.tmp
+# ============================================
+# Data Directories (Runtime & User Data)
+# ============================================
+# Exclude all data contents but preserve structure
+data/chats/
+data/chroma_db/
+data/chroma_db_docker/
+data/chroma_db_v2/
+data/database/
+data/database_backup/
+data/extracted_images/*
+data/incoming/*
+data/sorted/*
+data/*.db
+data/*.sqlite3
+data/**/*.bin
+data/**/*.pickle
+
+# Allow .gitkeep files to preserve directory structure
+!data/*/.gitkeep
+!data/**/.gitkeep
+
+# ============================================
+# User Documents & Test Files
+# ============================================
+test files/
+*.pptx
+*.docx
+*.xlsx
+
+# ============================================
+# Backups & Archives
+# ============================================
+project_backup/
+version/
+core.zip
+*.zip
+*_backup.*
+*.backup.*
+*.bak
+
+# ============================================
+# Generated Files
+# ============================================
+docs/
+*.mmd
+documind_ai_system_architecture
+middleware/
+
+# ============================================
+# Logs & Runtime Files
+# ============================================
+logs/
+*.log
+app.log
+dump.rdb
+*.rdb
+
+# ============================================
+# Temporary Files
+# ============================================
 *.tmp
 *.temp
-*.zip
-core.zip
+*.cache
+
+# ============================================
+# Duplicate/Nested Directories
+# ============================================
+New folder/
+templates/templates/
+static/static/
+templates/*_backup.html
+ignore/
+
+# ============================================
+# Archive (Old Code)
+# ============================================
+archive/
+
+# ============================================
+# OS Generated Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================
+# Optional: Keep Essential Configs
+# ============================================
+# If you have environment-specific configs, add them here
+# .env
+# config.local.py

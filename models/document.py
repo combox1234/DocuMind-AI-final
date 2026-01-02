@@ -11,6 +11,7 @@ class Document:
     filename: str
     filepath: Path
     file_hash: str
+    domain: str  # Added domain field
     category: str
     text_content: str
     file_type: str
@@ -31,6 +32,7 @@ class DocumentChunk:
     text: str
     chunk_index: int
     filename: str
+    domain: str  # Added domain field
     category: str
     filepath: str
     
@@ -38,6 +40,7 @@ class DocumentChunk:
         """Convert chunk to ChromaDB metadata format"""
         return {
             'filename': self.filename,
+            'domain': self.domain,  # Include domain in metadata
             'category': self.category,
             'filepath': self.filepath,
             'file_hash': self.document_hash,

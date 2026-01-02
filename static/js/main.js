@@ -18,7 +18,6 @@ const chatHistoryList = document.getElementById('chat-history-list');
 const newChatBtn = document.getElementById('new-chat-btn');
 
 // State
-let chatHistory = [];
 let currentSnippets = [];
 let settings = {
     voiceVolume: 100,
@@ -26,13 +25,47 @@ let settings = {
     voicePitch: 1.0,
     theme: 'dark'
 };
+// Authentication Guard - Redirect to login if not authenticated
+(function () {
+    const token = sessionStorage.getItem('access_token');
+    // Only check on main pages, not on login page itself
+    if (!token && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+        return;
+    }
+})();
+
+// Global Variables
+let currentChatId = null;
+let chatHistory = [];
+let currentDeleteChatId = null;
 let ttsActive = false;
 let currentUtterance = null;
-let currentChatId = null;
+
+
+// Auth Helper
+async function authFetch(url, options = {}) {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+        window.location.href = '/login';
+        throw new Error("No token");
+    }
+
+    options.headers = options.headers || {};
+    options.headers['Authorization'] = 'Bearer ' + token;
+
+    const response = await fetch(url, options);
+    if (response.status === 401) {
+        sessionStorage.removeItem('access_token');
+        window.location.href = '/login';
+        throw new Error("Unauthorized");
+    }
+    return response;
+}
 
 // FUNCTION DEFINITIONS
 function loadSettings() {
-    const stored = localStorage.getItem('docuMindSettings');
+    const stored = sessionStorage.getItem('docuMindSettings');
     if (stored) {
         settings = { ...settings, ...JSON.parse(stored) };
         applySettings();
@@ -40,7 +73,7 @@ function loadSettings() {
 }
 
 function saveSettings() {
-    localStorage.setItem('docuMindSettings', JSON.stringify(settings));
+    sessionStorage.setItem('docuMindSettings', JSON.stringify(settings));
 }
 
 function applySettings() {
@@ -91,6 +124,8 @@ function addMessage(text, sender, citedFiles = [], confidenceScore = null, sourc
     messageDiv.appendChild(label);
     messageDiv.appendChild(content);
 
+    // Confidence indicator removed as per user request (redundant with text response)
+    /*
     if (sender === 'assistant' && confidenceScore !== null) {
         const confDiv = document.createElement('div');
         confDiv.className = 'confidence-indicator';
@@ -98,6 +133,7 @@ function addMessage(text, sender, citedFiles = [], confidenceScore = null, sourc
         confDiv.innerHTML = `<div class="conf-bar" style="width: ${confidenceScore}%; background: ${color};"></div><span>${confidenceScore}%</span>`;
         content.appendChild(confDiv);
     }
+    */
 
     if (sender === 'assistant' && sourceSnippets && sourceSnippets.length > 0) {
         const btnWrap = document.createElement('div');
@@ -166,7 +202,7 @@ async function sendMessage() {
     // Auto-create chat if none active
     if (!currentChatId) {
         try {
-            const res = await fetch('/api/chats', {
+            const res = await authFetch('/api/chats', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: query.substring(0, 30) })
@@ -180,7 +216,7 @@ async function sendMessage() {
     }
 
     try {
-        const response = await fetch('/chat', {
+        const response = await authFetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query, chat_id: currentChatId })
@@ -208,7 +244,7 @@ async function sendMessage() {
 async function loadChatSessions() {
     if (!chatHistoryList) return;
     try {
-        const response = await fetch('/api/chats');
+        const response = await authFetch('/api/chats');
         const chats = await response.json();
         chatHistoryList.innerHTML = '';
 
@@ -289,7 +325,7 @@ async function deleteChat(chatId, title) {
     if (!confirmed) return;
 
     try {
-        const response = await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+        const response = await authFetch(`/api/chats/${chatId}`, { method: 'DELETE' });
         if (response.ok) {
             showToast('Chat deleted', 'success');
 
@@ -311,8 +347,21 @@ async function loadChat(chatId) {
     if (chatId === currentChatId) return;
     loading.classList.add('active');
     try {
-        const response = await fetch(`/api/chats/${chatId}/messages`);
+        const response = await authFetch(`/api/chats/${chatId}/messages`);
+
+        // Check if response is OK
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const messages = await response.json();
+
+        // Validate that messages is an array
+        if (!Array.isArray(messages)) {
+            console.error("Invalid response format:", messages);
+            throw new Error("Server returned invalid data format");
+        }
+
         currentChatId = chatId;
 
         // Clear UI
@@ -320,10 +369,26 @@ async function loadChat(chatId) {
         const welcome = document.querySelector('.welcome-message');
         if (welcome) welcome.remove();
 
-        messages.forEach(m => addMessage(m.text, m.sender, m.cited_files, m.confidence_score, m.source_snippets));
+        // Load messages with validation
+        messages.forEach((m, index) => {
+            if (!m || typeof m !== 'object') {
+                console.warn(`Skipping invalid message at index ${index}:`, m);
+                return;
+            }
+            addMessage(
+                m.text || '',
+                m.sender || 'unknown',
+                m.cited_files || [],
+                m.confidence_score || null,
+                m.source_snippets || []
+            );
+        });
+
         loadChatSessions(); // Update active highlight
+        showToast(`Loaded ${messages.length} messages`, 'success');
     } catch (e) {
-        showError("Failed to load chat");
+        console.error("Load chat error:", e);
+        showError("Failed to load chat: " + (e.message || e));
     } finally {
         loading.classList.remove('active');
     }
@@ -376,15 +441,92 @@ function speakText(text) {
 
 // Initialization and Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // Check Auth
+    if (!sessionStorage.getItem('access_token')) {
+        window.location.href = '/login';
+        return;
+    }
+
     loadSettings();
     loadChatSessions();
+
+    // Admin Button
+    // Admin Button
+    const role = sessionStorage.getItem('role');
+    if (role === 'Admin') {
+        const controlPanelButtons = document.querySelector('.control-panel-buttons');
+        if (controlPanelButtons) {
+            const adminBtn = document.createElement('button');
+            adminBtn.id = 'admin-panel-btn';
+            adminBtn.className = 'control-btn';
+            adminBtn.title = 'Admin Dashboard';
+            // Use standard structure for control buttons
+            adminBtn.innerHTML = '<span class="control-label">Admin Panel</span>';
+            adminBtn.onclick = () => window.location.href = '/admin';
+
+            // Prepend to the list or append? User said "align in properly". 
+            // Usually admin stuff is important, maybe at top or bottom. 
+            // Control panel has: Read Aloud, Export, Clear, Settings.
+            // Let's add it at the top of the control controls.
+            controlPanelButtons.insertBefore(adminBtn, controlPanelButtons.firstChild);
+        }
+    }
+
+    // Upload/Delete Buttons - Check permissions and attach listeners
+    setTimeout(() => {
+        const permissions = JSON.parse(sessionStorage.getItem('permissions') || '[]');
+        const uploadBtn = document.getElementById('upload-btn');
+        const manageBtn = document.getElementById('manage-files-btn');
+
+        // Show/hide upload buttons based on permission
+        // Admin has wildcard '*', others need explicit 'files.upload'
+        const role = sessionStorage.getItem('role');
+        const hasPermission = role === 'Admin' || permissions.includes('*') || permissions.includes('files.upload');
+        if (hasPermission) {
+            if (uploadBtn) {
+                uploadBtn.style.display = 'block';
+                uploadBtn.addEventListener('click', openUploadModal);
+            }
+            if (manageBtn) {
+                manageBtn.style.display = 'block';
+                manageBtn.addEventListener('click', openFileManagementModal);
+            }
+            updateQuotaDisplay(); // Update quota on load
+        } else {
+            if (uploadBtn) uploadBtn.style.display = 'none';
+            if (manageBtn) manageBtn.style.display = 'none';
+        }
+    }, 500);
 
     if (sendBtn) sendBtn.addEventListener('click', sendMessage);
     if (queryInput) queryInput.addEventListener('keypress', e => {
         if (e.key === 'Enter') sendMessage();
     });
 
+    // Logout Handler - Show confirmation modal
+    const logoutBtn = document.getElementById('logout-btn');
+    const logoutModal = document.getElementById('logout-confirm-modal');
+    const confirmLogoutBtn = document.getElementById('confirm-logout-btn');
+    const cancelLogoutBtn = document.getElementById('cancel-logout-btn');
 
+    if (logoutBtn && logoutModal) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            logoutModal.style.display = 'flex';
+        });
+
+        confirmLogoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('username');
+            sessionStorage.removeItem('role');
+            window.location.href = '/login';
+        });
+
+        cancelLogoutBtn.addEventListener('click', () => {
+            logoutModal.style.display = 'none';
+        });
+    }
 
     if (newChatBtn) newChatBtn.addEventListener('click', startNewChat);
 
@@ -392,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (clearChatBtn) clearChatBtn.addEventListener('click', () => {
         if (confirm('Are you sure you want to clear this chat?')) {
             if (currentChatId) {
-                fetch(`/api/chats/${currentChatId}/messages`, { method: 'DELETE' }) // Hypothetical clear endpoint or just new chat
+                authFetch(`/api/chats/${currentChatId}/messages`, { method: 'DELETE' }) // Hypothetical clear endpoint or just new chat
                     .then(() => startNewChat());
             } else {
                 startNewChat();
@@ -420,8 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('No message to read', 'warning');
         }
     });
-
-    // ... (Export Button Listener remains here) ...
 
 
     // Export Button
@@ -455,12 +595,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     if (settingsBtn) settingsBtn.addEventListener('click', () => {
-        settingsModal.style.display = 'block';
+        settingsModal.style.display = 'flex';
     });
+
+    // Real-time slider value updates
+    const volumeSlider = document.getElementById('voice-volume');
+    const rateSlider = document.getElementById('voice-rate');
+    const pitchSlider = document.getElementById('voice-pitch');
+
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', (e) => {
+            document.getElementById('volume-value').textContent = e.target.value + '%';
+        });
+    }
+
+    if (rateSlider) {
+        rateSlider.addEventListener('input', (e) => {
+            document.getElementById('rate-value').textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+        });
+    }
+
+    if (pitchSlider) {
+        pitchSlider.addEventListener('input', (e) => {
+            document.getElementById('pitch-value').textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+        });
+    }
 
     document.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', () => btn.closest('.modal').style.display = 'none');
     });
+
+    // Open Change Password Modal from Settings
+    const changePasswordSettingsBtn = document.getElementById('change-password-settings-btn');
+    if (changePasswordSettingsBtn) {
+        changePasswordSettingsBtn.addEventListener('click', () => {
+            document.getElementById('user-change-password-modal').style.display = 'flex';
+        });
+    }
+
+    // Change Password Handler (for regular users)
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', async () => {
+            const currentPw = document.getElementById('current-password-user').value;
+            const newPw = document.getElementById('new-password-user').value;
+            const confirmPw = document.getElementById('confirm-password-user').value;
+
+            // Validate
+            if (!currentPw || !newPw || !confirmPw) {
+                showToast('All password fields are required', 'error');
+                return;
+            }
+            if (newPw.length < 6) {
+                showToast('Password must be at least 6 characters', 'error');
+                return;
+            }
+            if (newPw !== confirmPw) {
+                showToast('New passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const res = await authFetch('/api/users/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_password: currentPw,
+                        new_password: newPw
+                    })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(data.message || 'Password updated successfully', 'success');
+                    // Clear fields
+                    document.getElementById('current-password-user').value = '';
+                    document.getElementById('new-password-user').value = '';
+                    document.getElementById('confirm-password-user').value = '';
+                } else {
+                    showToast(data.error || 'Failed to update password', 'error');
+                }
+            } catch (e) {
+                showToast('Error updating password', 'error');
+            }
+        });
+    }
 
     // Theme selector
     document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -484,3 +703,478 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+// ===== UPLOAD & FILE MANAGEMENT FUNCTIONS =====
+// Add these to main.js
+
+// Update quota display on button
+async function updateQuotaDisplay() {
+    try {
+        const response = await authFetch('/api/upload/quota');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const uploadBtn = document.getElementById('upload-btn');
+
+        if (!uploadBtn) return;
+
+        if (data.limit === null) {
+            // Admin - unlimited
+            uploadBtn.querySelector('.control-label').textContent = 'Upload Files (Unlimited)';
+            uploadBtn.disabled = false;
+            uploadBtn.title = 'Upload files to incoming directory';
+        } else {
+            // Regular user with quota
+            uploadBtn.querySelector('.control-label').textContent = `Upload Files (${data.used}/${data.limit})`;
+
+            if (data.remaining <= 0) {
+                uploadBtn.disabled = true;
+                uploadBtn.style.opacity = '0.5';
+                uploadBtn.style.cursor = 'not-allowed';
+                uploadBtn.title = 'Upload limit reached. Delete some files to upload more.';
+            } else {
+                uploadBtn.disabled = false;
+                uploadBtn.style.opacity = '1';
+                uploadBtn.style.cursor = 'pointer';
+                uploadBtn.title = `Upload files (${data.remaining} remaining)`;
+            }
+        }
+    } catch (e) {
+        console.error('Error updating quota:', e);
+    }
+}
+
+// Open upload modal
+async function openUploadModal() {
+    try {
+        const response = await authFetch('/api/upload/quota');
+        const data = await response.json();
+
+        const quotaDisplay = document.getElementById('upload-quota-display');
+        if (data.limit === null) {
+            quotaDisplay.textContent = 'You have unlimited uploads (Admin)';
+            quotaDisplay.style.color = 'var(--success-color)';
+        } else {
+            quotaDisplay.textContent = `Files uploaded: ${data.used}/${data.limit} (${data.remaining} remaining)`;
+            quotaDisplay.style.color = data.remaining > 0 ? 'var(--text-secondary)' : 'var(--danger-color)';
+        }
+
+        openModal('upload-modal');
+    } catch (e) {
+        showToast('Error loading quota', 'error');
+    }
+}
+
+// Submit file upload
+async function submitUpload() {
+    const fileInput = document.getElementById('file-upload-input');
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        showToast('Please select files to upload', 'error');
+        return;
+    }
+
+    const uploadBtn = document.getElementById('upload-submit-btn');
+    const progressDiv = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const statusText = document.getElementById('upload-status');
+
+    uploadBtn.disabled = true;
+    progressDiv.style.display = 'block';
+
+    let uploaded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progress = ((i + 1) / files.length) * 100;
+        progressBar.style.width = progress + '%';
+        statusText.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name}`;
+
+        // Check file size
+        if (file.size > 25 * 1024 * 1024) {
+            showToast(`File "${file.name}" is too large (max 25MB)`, 'error');
+            failed++;
+            continue;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await authFetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                uploaded++;
+            } else {
+                showToast(`Error uploading "${file.name}": ${data.error}`, 'error');
+                failed++;
+                // If quota reached, stop trying
+                if (response.status === 429) break;
+            }
+        } catch (e) {
+            showToast(`Error uploading "${file.name}"`, 'error');
+            failed++;
+        }
+    }
+
+    // Reset and close
+    uploadBtn.disabled = false;
+    progressDiv.style.display = 'none';
+    progressBar.style.width = '0%';
+    fileInput.value = '';
+
+    // Show summary
+    if (uploaded > 0) {
+        showToast(`Successfully uploaded ${uploaded} file(s)${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+    }
+
+    // Update quota and close modal
+    await updateQuotaDisplay();
+    closeModal('upload-modal');
+}
+
+// Open file management modal
+async function openFileManagementModal() {
+    openModal('file-management-modal');
+    await loadUserFiles();
+}
+
+// Load user's files
+async function loadUserFiles() {
+    try {
+        const [filesResponse, quotaResponse] = await Promise.all([
+            authFetch('/api/files'),
+            authFetch('/api/upload/quota')
+        ]);
+
+        const filesData = await filesResponse.json();
+        const quotaData = await quotaResponse.json();
+
+        // Update quota display
+        const quotaDisplay = document.getElementById('manage-quota-display');
+        if (quotaData.limit === null) {
+            quotaDisplay.textContent = 'Uploads: Unlimited (Admin)';
+        } else {
+            quotaDisplay.textContent = `Uploads: ${quotaData.used}/${quotaData.limit}`;
+        }
+
+        // Populate file table
+        const tbody = document.getElementById('files-table-body');
+        if (filesData.files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">No files uploaded yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filesData.files.map(file => {
+            const sizeKB = (file.size / 1024).toFixed(2);
+            const uploadedBy = file.uploaded_by || 'Unknown';
+            return `
+                <tr>
+                    <td>${file.filename}</td>
+                    <td><span class="file-chip">${file.domain}</span></td>
+                    <td><span class="tag">${file.category}</span></td>
+                    <td>${sizeKB} KB</td>
+                    <td>${uploadedBy}</td>
+                    <td>
+                        <button class="btn-danger" style="padding: 4px 12px; font-size: 13px;" 
+                            onclick="deleteUserFile('${file.path.replace(/\\/g, '\\\\')}', '${file.filename}')">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (e) {
+        showToast('Error loading files', 'error');
+        console.error(e);
+    }
+}
+
+// Delete user file
+async function deleteUserFile(filepath, filename) {
+    if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+
+    try {
+        const response = await authFetch(`/api/files/${filepath}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast(`File deleted successfully`, 'success');
+            await loadUserFiles(); // Refresh list
+            await updateQuotaDisplay(); // Update button quota
+        } else {
+            showToast(`Error: ${data.error}`, 'error');
+        }
+    } catch (e) {
+        showToast('Error deleting file', 'error');
+    }
+}
+
+// ===== UPLOAD & FILE MANAGEMENT FUNCTIONS =====
+// Add these to main.js
+
+// Update quota display on button
+async function updateQuotaDisplay() {
+    try {
+        const response = await authFetch('/api/upload/quota');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const uploadBtn = document.getElementById('upload-btn');
+
+        if (!uploadBtn) return;
+
+        if (data.limit === null) {
+            // Admin - unlimited
+            uploadBtn.querySelector('.control-label').textContent = 'Upload Files (Unlimited)';
+            uploadBtn.disabled = false;
+            uploadBtn.title = 'Upload files to incoming directory';
+        } else {
+            // Regular user with quota
+            uploadBtn.querySelector('.control-label').textContent = `Upload Files (${data.used}/${data.limit})`;
+
+            if (data.remaining <= 0) {
+                uploadBtn.disabled = true;
+                uploadBtn.style.opacity = '0.5';
+                uploadBtn.style.cursor = 'not-allowed';
+                uploadBtn.title = 'Upload limit reached. Delete some files to upload more.';
+            } else {
+                uploadBtn.disabled = false;
+                uploadBtn.style.opacity = '1';
+                uploadBtn.style.cursor = 'pointer';
+                uploadBtn.title = `Upload files (${data.remaining} remaining)`;
+            }
+        }
+    } catch (e) {
+        console.error('Error updating quota:', e);
+    }
+}
+
+// Open upload modal
+async function openUploadModal() {
+    try {
+        const response = await authFetch('/api/upload/quota');
+        const data = await response.json();
+
+        const quotaDisplay = document.getElementById('upload-quota-display');
+        if (data.limit === null) {
+            quotaDisplay.textContent = 'You have unlimited uploads (Admin)';
+            quotaDisplay.style.color = 'var(--success-color)';
+        } else {
+            quotaDisplay.textContent = `Files uploaded: ${data.used}/${data.limit} (${data.remaining} remaining)`;
+            quotaDisplay.style.color = data.remaining > 0 ? 'var(--text-secondary)' : 'var(--danger-color)';
+        }
+
+        openModal('upload-modal');
+    } catch (e) {
+        showToast('Error loading quota', 'error');
+    }
+}
+
+// Submit file upload
+async function submitUpload() {
+    const fileInput = document.getElementById('file-upload-input');
+    const files = fileInput.files;
+
+    if (files.length === 0) {
+        showToast('Please select files to upload', 'error');
+        return;
+    }
+
+    const uploadBtn = document.getElementById('upload-submit-btn');
+    const progressDiv = document.getElementById('upload-progress');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const statusText = document.getElementById('upload-status');
+
+    uploadBtn.disabled = true;
+    progressDiv.style.display = 'block';
+
+    let uploaded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progress = ((i + 1) / files.length) * 100;
+        progressBar.style.width = progress + '%';
+        statusText.textContent = `Uploading ${i + 1} of ${files.length}: ${file.name}`;
+
+        // Check file size
+        if (file.size > 25 * 1024 * 1024) {
+            showToast(`File "${file.name}" is too large (max 25MB)`, 'error');
+            failed++;
+            continue;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await authFetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                uploaded++;
+            } else {
+                showToast(`Error uploading "${file.name}": ${data.error}`, 'error');
+                failed++;
+                // If quota reached, stop trying
+                if (response.status === 429) break;
+            }
+        } catch (e) {
+            showToast(`Error uploading "${file.name}"`, 'error');
+            failed++;
+        }
+    }
+
+    // Reset and close
+    uploadBtn.disabled = false;
+    progressDiv.style.display = 'none';
+    progressBar.style.width = '0%';
+    fileInput.value = '';
+
+    // Show summary
+    if (uploaded > 0) {
+        showToast(`Successfully uploaded ${uploaded} file(s)${failed > 0 ? `, ${failed} failed` : ''}`, 'success');
+    }
+
+    // Update quota and close modal
+    await updateQuotaDisplay();
+    closeModal('upload-modal');
+}
+
+// Open file management modal
+async function openFileManagementModal() {
+    openModal('file-management-modal');
+    await loadUserFiles();
+}
+
+// Load user's files
+async function loadUserFiles() {
+    try {
+        const [filesResponse, quotaResponse] = await Promise.all([
+            authFetch('/api/files'),
+            authFetch('/api/upload/quota')
+        ]);
+
+        const filesData = await filesResponse.json();
+        const quotaData = await quotaResponse.json();
+
+        // Update quota display
+        const quotaDisplay = document.getElementById('manage-quota-display');
+        if (quotaData.limit === null) {
+            quotaDisplay.textContent = 'Uploads: Unlimited (Admin)';
+        } else {
+            quotaDisplay.textContent = `Uploads: ${quotaData.used}/${quotaData.limit}`;
+        }
+
+        // Populate file table
+        const tbody = document.getElementById('files-table-body');
+        if (filesData.files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">No files uploaded yet</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = filesData.files.map(file => {
+            const sizeKB = (file.size / 1024).toFixed(2);
+            const uploadedBy = file.uploaded_by || 'Unknown';
+            return `
+                <tr>
+                    <td>${file.filename}</td>
+                    <td><span class="file-chip">${file.domain}</span></td>
+                    <td><span class="tag">${file.category}</span></td>
+                    <td>${sizeKB} KB</td>
+                    <td>${uploadedBy}</td>
+                    <td>
+                        <button class="btn-danger" style="padding: 4px 12px; font-size: 13px;" 
+                            onclick="deleteUserFile('${file.path.replace(/\\/g, '\\\\')}', '${file.filename}')">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (e) {
+        showToast('Error loading files', 'error');
+        console.error(e);
+    }
+}
+
+// Delete user file
+async function deleteUserFile(filepath, filename) {
+    if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+
+    try {
+        const response = await authFetch(`/api/files/${filepath}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast(`File deleted successfully`, 'success');
+            await loadUserFiles(); // Refresh list
+            await updateQuotaDisplay(); // Update button quota
+        } else {
+            showToast(`Error: ${data.error}`, 'error');
+        }
+    } catch (e) {
+        showToast('Error deleting file', 'error');
+    }
+}
+
+// Initialize upload/delete on page load
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for auth to complete
+    setTimeout(() => {
+        const permissions = JSON.parse(sessionStorage.getItem('permissions') || '[]');
+
+        // Show/hide upload buttons based on permission
+        // Admin has wildcard '*', others need explicit 'files.upload'
+        const role = sessionStorage.getItem('role');
+        const hasPermission = role === 'Admin' || permissions.includes('*') || permissions.includes('files.upload');
+        if (hasPermission) {
+            document.getElementById('upload-btn').style.display = 'block';
+            document.getElementById('manage-files-btn').style.display = 'block';
+            updateQuotaDisplay(); // Update quota on load
+        } else {
+            document.getElementById('upload-btn').style.display = 'none';
+            document.getElementById('manage-files-btn').style.display = 'none';
+        }
+
+        // Attach event listeners
+        document.getElementById('upload-btn')?.addEventListener('click', openUploadModal);
+        document.getElementById('manage-files-btn')?.addEventListener('click', openFileManagementModal);
+    }, 500);
+});
+// Modal helper functions - add to main.js
+
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}

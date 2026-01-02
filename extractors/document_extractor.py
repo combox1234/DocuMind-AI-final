@@ -30,19 +30,25 @@ class DocumentExtractor:
             prs = Presentation(filepath)
             text_parts = []
             
+            def _get_shape_text(shape):
+                text = ""
+                if shape.has_text_frame:
+                    text += shape.text + "\n"
+                if shape.has_table:
+                    for row in shape.table.rows:
+                        row_text = " | ".join([cell.text_frame.text if cell.text_frame else cell.text for cell in row.cells])
+                        text += row_text + "\n"
+                if shape.shape_type == 6:  # Group
+                    for child in shape.shapes:
+                        text += _get_shape_text(child)
+                return text
+
             for slide_num, slide in enumerate(prs.slides, 1):
                 slide_text = f"\n=== Slide {slide_num} ===\n"
                 
-                # Extract text from all shapes
+                # Extract text using recursive helper
                 for shape in slide.shapes:
-                    if hasattr(shape, "text") and shape.text:
-                        slide_text += shape.text + "\n"
-                    
-                    # Extract text from tables
-                    if shape.has_table:
-                        for row in shape.table.rows:
-                            row_text = " | ".join([cell.text for cell in row.cells])
-                            slide_text += row_text + "\n"
+                    slide_text += _get_shape_text(shape)
                 
                 text_parts.append(slide_text)
             

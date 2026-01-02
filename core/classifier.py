@@ -20,6 +20,7 @@ class DocumentClassifier:
                       "api architecture", "rest api", "api design", "api development",
                       "infrastructure", "infrastructure as code", "terraform", "ansible",
                       "ssl", "tls", "ssl certificate", "tls certificate", "encryption", "authentication protocol", "authorization",
+                      "cipher", "cryptography", "symmetric", "asymmetric", "decryption", "hashing", "aes", "rsa", "sha",
                       "git workflow", "version control system", "ci/cd pipeline", "jenkins", "gitlab ci", "github actions",
                       "iot", "iot device", "sensor", "edge computing", "embedded system",
                       "network", "networking", "firewall", "proxy", "load balancer",
@@ -288,6 +289,34 @@ class DocumentClassifier:
                     "category_score": 100,
                 }
 
+        # Extension-based code file classification
+        CODE_EXTENSIONS = {
+            'py', 'js', 'jsx', 'ts', 'tsx', 'java', 'cpp', 'c', 'h', 'hpp',
+            'cs', 'go', 'rs', 'rb', 'php', 'swift', 'kt', 'scala',
+            'sh', 'bash', 'ps1', 'bat', 'cmd', 'sql', 'r', 'dart', 'lua'
+        }
+        
+        if ext in CODE_EXTENSIONS:
+            # Determine subcategory based on extension
+            frontend_exts = {'js', 'jsx', 'ts', 'tsx', 'html', 'css', 'scss', 'sass', 'vue'}
+            backend_exts = {'py', 'java', 'go', 'php', 'rb', 'rs', 'cs'}
+            
+            if ext in frontend_exts:
+                category = "Frontend"
+            elif ext in backend_exts:
+                category = "Backend"
+            else:
+                category = "Script"
+                
+            return {
+                "domain": "Code",
+                "category": category,
+                "file_extension": ext,
+                "confidence": 0.95,
+                "domain_score": 100,
+                "category_score": 100,
+            }
+
         # Extension-based documentation hint
         if ext in {"md","rst","adoc"}:
             return {
@@ -310,7 +339,7 @@ class DocumentClassifier:
             "API": ["api", "endpoint", "rest", "graphql", "grpc", "swagger", "openapi"],
             "DevOps": ["docker", "kubernetes", "ci/cd", "jenkins", "terraform", "ansible", "cloud"],
             "AI": ["artificial intelligence", "ai", "machine learning", "deep learning", "llm", "neural network"],
-            "Security": ["security", "encryption", "ssl", "tls", "auth", "firewall", "cyber"],
+            "Security": ["security", "encryption", "ssl", "tls", "auth", "firewall", "cyber", "cipher", "crypto", "aes", "rsa"],
             "Mobile": ["mobile", "ios", "android", "flutter", "react native", "app"],
             "Other": []
         },

@@ -1,11 +1,1 @@
-Test Results (Quick Analysis)
-Success:
-lab_report_blood.txt → Healthcare/LabReport (Perfect)
-docker_deployment_logs.log → Technology/DevOps (Spot on)
-invoice_laptop_purchase.txt → Finance/Tax (Correct)
-Edge Case Detected (Bug found!):
-leaving_certificate_draft.txt → Technology/Other.
-Why? The word "Certificate" is currently in the Technology list (meant for SSL Certificates), so it overpowered "School".
-Fix for later: We should move "certificate" to a shared keyword list or negative prompt for Tech unless accompanied by "SSL/TLS".
-Go ahead and try chatting with your documents! Try asking: "What is the diagnosis in the lab report?" or "Summarize the SOW timeline."
-
+can u for now make it for admin only juch that admin can make n number of roles on his own and give access to files others according to him example(hod of department can handle all fills edit delete and according to themselfs and can have track of everything on server... then consider college teachers... they can add notes and delete notes and their personal data which college has and needs but can access college files like college management details and college insiders then comes student who can only and only ask Qs and delete chats they did(not others chat ofc...)... no uploading allowed... only QnA which will be from college notes and QB from given notes from college facuties.... example consider first year now we will give access to only first year notes rather than third year or fourth year right?

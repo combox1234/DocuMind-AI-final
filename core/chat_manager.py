@@ -39,8 +39,13 @@ class ChatManager:
         except Exception as e:
             logger.error(f"Failed to save chat metadata: {e}")
 
-    def create_chat(self, title: str = "New Chat") -> Dict:
-        """Create a new chat session"""
+    def create_chat(self, title: str = "New Chat", user_id: int = None) -> Dict:
+        """Create a new chat session
+        
+        Args:
+            title: Chat title
+            user_id: ID of user who owns this chat
+        """
         chat_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
         
@@ -49,7 +54,8 @@ class ChatManager:
             "id": chat_id,
             "title": title,
             "created_at": created_at,
-            "updated_at": created_at
+            "updated_at": created_at,
+            "user_id": user_id  # Add user_id to metadata
         }
         
         # Update metadata
@@ -63,8 +69,35 @@ class ChatManager:
         return meta_entry
 
     def get_chats(self) -> List[Dict]:
-        """Get all chat sessions (metadata)"""
+        """Get all chat sessions (metadata) - deprecated, use get_user_chats"""
         return self._load_metadata()
+    
+    def get_user_chats(self, user_id: int) -> List[Dict]:
+        """Get chat sessions for a specific user
+        
+        Args:
+            user_id: User ID to filter chats
+            
+        Returns:
+            List of chat metadata for the specified user
+        """
+        all_chats = self._load_metadata()
+        return [chat for chat in all_chats if chat.get('user_id') == user_id]
+    
+    def get_all_chats_grouped(self) -> Dict[int, List[Dict]]:
+        """Get all chats grouped by user (for admin view)
+        
+        Returns:
+            Dictionary mapping user_id -> list of chats
+        """
+        all_chats = self._load_metadata()
+        grouped = {}
+        for chat in all_chats:
+            uid = chat.get('user_id')
+            if uid not in grouped:
+                grouped[uid] = []
+            grouped[uid].append(chat)
+        return grouped
 
     def get_messages(self, chat_id: str) -> List[Dict]:
         """Get messages for a specific chat"""

@@ -1,0 +1,34 @@
+
+# 🎨 AI Image Generation Prompts (for Nano Banana / Midjourney / DALL-E)
+
+Use these prompts to generate cool visuals for your Project Report / PPT!
+
+---
+
+### 1. The Overall System (The "Brain")
+**Concept:** A futuristic digital brain processing documents.
+**Prompt:**
+> isometric 3d illustration of a glowing digital brain in the center, surrounded by floating documents (PDF, Word, Excel), blue and purple neon lighting, cyberpunk style, high tech server room background, 4k, unreal engine render, detailed data streams connecting to the brain
+
+### 2. The Sorting Pipeline (The "Factory")
+**Concept:** Files going in messy, coming out organized.
+**Prompt:**
+> 3d isometric conveyor belt factory, left side has messy pile of random paper files, robot arm labeled "AI" sorts them into neat colorful boxes labeled "Finance", "Legal", "Medical", glowing laser scanner scanning a document, clean minimalist tech style, white and orange color scheme
+
+### 3. The Retrieval Process (RAG)
+**Concept:** A user asking a question and getting a precise answer from a library.
+**Prompt:**
+> digital library interface, futuristic holographic search bar with text "Query", a beam of light extracting specific information from a glowing book on a shelf, data particles forming a precise answer, dark mode UI, matrix code rain in background, cinematic lighting
+
+### 4. Security & RBAC (The "Shield")
+**Concept:** Secure access control.
+**Prompt:**
+> 3d glass shield protecting a folder of sensitive documents, digital padlock with biometric scanner, red laser grid, authorized user generic avatar passing through with a green key card, unauthorized shadow figure blocked by red wall, cybersecurity concept art
+
+### 5. The Tech Stack (Abstract)
+**Concept:** Python, Database, and AI working together.
+**Prompt:**
+> abstract technology composition, Python logo as a central snake cybernetic creature, wrapping around a glowing crystal database, connecting to a neural network mesh, fast motion blur, data cables, hyperrealistic, 8k resolution
+
+---
+**Tip:** If "Nano Banana" is a specific style model (like anime or cartoon), these prompts will still work, just add "in the style of [Style Name]" to the end!

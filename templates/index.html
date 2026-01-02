@@ -6,6 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>DocuMind AI</title>
+    <script>
+        // CRITICAL: Auth check - must run BEFORE page loads
+        (function () {
+            const token = sessionStorage.getItem('access_token');
+            if (!token) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
     <link rel="stylesheet"
         href="{{ url_for('static', filename='css/style.css') }}?v={{ range(1000000000000, 9999999999999) | random }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +23,12 @@
 </head>
 
 <body>
+    <!-- Hack to prevent browser autofill -->
+    <div style="height: 0; overflow: hidden;">
+        <input type="text" name="fakeusernameremembered" tabindex="-1" />
+        <input type="password" name="fakepasswordremembered" tabindex="-1" />
+    </div>
+
     <header>
         <h1>DocuMind AI <span class="header-emoji">🔎</span></h1>
     </header>
@@ -31,7 +46,7 @@
             </aside>
 
             <div id="chat-container">
-                <div class="welcome-message">
+                <div class="welcome-message" style="text-align: center;">
                     <h2>Welcome</h2>
                     <p>Ask questions about your documents and get instant answers.</p>
                 </div>
@@ -42,6 +57,14 @@
                     <h3>Controls</h3>
                 </div>
                 <div class="control-panel-buttons">
+                    <button class="control-btn" id="upload-btn" title="Upload files">
+                        <span class="control-label">Upload Files</span>
+                    </button>
+
+                    <button class="control-btn" id="manage-files-btn" title="Manage your files">
+                        <span class="control-label">Manage Files</span>
+                    </button>
+
                     <button class="control-btn" id="tts-btn" title="Text-to-Speech">
                         <span class="control-label">Read Aloud</span>
                     </button>
@@ -55,6 +78,11 @@
                     <button class="control-btn" id="settings-btn" title="Settings">
                         <span class="control-label">Settings</span>
                     </button>
+
+                    <button class="control-btn" id="logout-btn" title="Logout"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-top: auto;">
+                        <span class="control-label">Logout</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -67,7 +95,8 @@
         <div id="toast-container"></div>
 
         <div class="input-container">
-            <input type="text" id="query-input" placeholder="Ask a question about your documents..." autocomplete="off">
+            <input type="text" id="query-input" name="chat-query-unique"
+                placeholder="Ask a question about your documents..." autocomplete="new-password">
             <button id="send-btn">Send</button>
         </div>
     </main>
@@ -119,10 +148,10 @@
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2>Settings</h2>
+            <h2 style="text-align: center; margin-bottom: 24px;">Settings</h2>
 
             <div class="settings-section">
-                <h3>Voice Settings</h3>
+                <h3 style="text-align: center; margin-bottom: 16px;">Voice Settings</h3>
                 <div class="voice-control">
                     <label for="voice-volume">Volume:</label>
                     <input type="range" id="voice-volume" min="0" max="100" value="100" step="10">
@@ -135,29 +164,33 @@
                 </div>
                 <div class="voice-control">
                     <label for="voice-pitch">Pitch:</label>
-                    <input type="range" id="voice-pitch" min="0.5" max="2" step="0.1" value="1.0">
+                    <input type="range" id="voice-pitch" min="0.5" max="2" step="0.1" value="1">
                     <span id="pitch-value">1.0x</span>
                 </div>
-            </div>
 
-            <div class="settings-section">
-                <h3>Theme</h3>
-                <div class="theme-selector">
-                    <button class="theme-btn active" data-theme="dark">
-                        <span class="theme-name">Dark</span>
-                    </button>
-                    <button class="theme-btn" data-theme="moderate">
-                        <span class="theme-name">Moderate</span>
-                    </button>
-                    <button class="theme-btn" data-theme="light">
-                        <span class="theme-name">Light</span>
-                    </button>
+                <div class="settings-section">
+                    <h3 style="text-align: center; margin-bottom: 16px;">Theme</h3>
+                    <div class="theme-selector">
+                        <button class="theme-btn active" data-theme="dark">
+                            <span class="theme-name">Dark</span>
+                        </button>
+                        <button class="theme-btn" data-theme="moderate">
+                            <span class="theme-name">Moderate</span>
+                        </button>
+                        <button class="theme-btn" data-theme="light">
+                            <span class="theme-name">Light</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="modal-actions">
-                <button id="reset-settings-btn" class="btn-secondary">Reset</button>
-                <button id="save-settings-btn" class="btn-primary">Save</button>
+                <div class="modal-actions"
+                    style="display: flex; justify-content: space-between; gap: 10px; margin-top: 24px;">
+                    <button id="change-password-settings-btn" class="btn-secondary">Change Password</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="reset-settings-btn" class="btn-secondary">Reset</button>
+                        <button id="save-settings-btn" class="btn-primary">Save</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -170,6 +203,127 @@
             <div class="modal-actions">
                 <button id="cancel-delete-btn" class="btn-secondary">Cancel</button>
                 <button id="confirm-delete-btn" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logout-confirm-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2>Logout</h2>
+            <p>Are you sure you want to logout?</p>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="cancel-logout-btn" class="btn-secondary">No</button>
+                <button id="confirm-logout-btn" class="btn-danger">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Change Password Modal -->
+    <div id="user-change-password-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal"
+                onclick="document.getElementById('user-change-password-modal').style.display='none'">&times;</span>
+            <h2 style="margin-bottom: 24px; font-size: 24px;">Change Password</h2>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 10px; color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                    Current Password:
+                </label>
+                <input type="password" id="current-password-user" placeholder="Enter current password"
+                    style="width: 100%; padding: 12px 16px; font-size: 14px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label
+                    style="display: block; margin-bottom: 10px; color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                    New Password <span style="color: var(--text-secondary); font-weight: 400;">(minimum 6
+                        characters)</span>
+                </label>
+                <input type="password" id="new-password-user" placeholder="Enter new password"
+                    style="width: 100%; padding: 12px 16px; font-size: 14px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+
+            <div style="margin-bottom: 28px;">
+                <label
+                    style="display: block; margin-bottom: 10px; color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                    Confirm New Password:
+                </label>
+                <input type="password" id="confirm-password-user" placeholder="Re-enter new password"
+                    style="width: 100%; padding: 12px 16px; font-size: 14px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+
+            <button id="change-password-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">
+                Update Password
+            </button>
+        </div>
+    </div>
+
+    <!-- Upload File Modal -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeModal('upload-modal')">&times;</span>
+            <h2 style="margin-bottom: 16px;">Upload Files</h2>
+
+            <p id="upload-quota-display" style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
+                Loading quota...
+            </p>
+
+            <div style="margin-bottom: 20px;">
+                <input type="file" id="file-upload-input" multiple
+                    style="display: block; width: 100%; padding: 12px; border: 2px dashed var(--border-color); border-radius: 8px; background: var(--input-bg); cursor: pointer;">
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 8px;">
+                    Max file size: 25MB per file
+                </p>
+            </div>
+
+            <div id="upload-progress" style="display: none; margin-bottom: 16px;">
+                <div style="background: var(--input-bg); border-radius: 8px; height: 8px; overflow: hidden;">
+                    <div id="upload-progress-bar"
+                        style="background: #667eea; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <p id="upload-status" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;"></p>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-secondary" onclick="closeModal('upload-modal')">Cancel</button>
+                <button class="btn-primary" id="upload-submit-btn" onclick="submitUpload()">Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Management Modal -->
+    <div id="file-management-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px; max-height: 80vh;">
+            <span class="close-modal" onclick="closeModal('file-management-modal')">&times;</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">My Files</h2>
+                <p id="manage-quota-display" style="margin: 0; color: var(--text-secondary); font-size: 14px;">
+                    Loading...
+                </p>
+            </div>
+
+            <div style="overflow-y: auto; max-height: 500px;">
+                <table class="data-table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Domain</th>
+                            <th>Category</th>
+                            <th>Size</th>
+                            <th>Uploaded By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="files-table-body">
+                        <!-- Loaded by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 16px; text-align: right;">
+                <button class="btn-secondary" onclick="closeModal('file-management-modal')">Close</button>
             </div>
         </div>
     </div>
