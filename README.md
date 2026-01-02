@@ -4,6 +4,39 @@ This document is a detailed, repository-sourced runbook for `combox1234/DocuMind
 
 ---
 
+## Quick Start (TL;DR)
+
+1. **Install Prerequisites:**
+   - Python 3.12
+   - Ollama + `llama3.2` model
+   - Redis/Memurai (Windows)
+   - Tesseract OCR
+   - FFmpeg
+
+2. **Setup Project:**
+   ```bash
+   pip install -r requirements.txt
+   pip install waitress celery redis eventlet
+   ```
+
+3. **Run (3 Terminals Required):**
+   ```bash
+   # Terminal 1: Server
+   python serve.py
+   
+   # Terminal 2: Celery Worker
+   celery -A worker.celery_app worker --pool=solo -l info
+   
+   # Terminal 3: File Watcher
+   python watcher.py
+   ```
+
+4. **Access:** http://localhost:5000
+
+**Complete installation guides:** See Section 7 below or [INSTALLATION_NEW.md](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/readables/installation/INSTALLATION_NEW.md)
+
+---
+
 ## 1) Project Overview
 
 DocuMind AI is a local-first Retrieval-Augmented Generation (RAG) system that:
@@ -91,10 +124,7 @@ References:
 From repository analysis docs:  
 [readables/reports/project_analysis_v5.md](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/readables/reports/project_analysis_v5.md)
 
-- core/llm.py (or core/core/llm.py in heuristic section):
-  - Ollama API integration (model `llama3.2`).
-  - Cross-Encoder reranking (e.g., `ms-marco-MiniLM-L-6-v2`) with filtering threshold (~0.35).
-  - Strict RAG prompt construction, citations, confidence scoring.
+- [core/llm.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/llm.py) — Ollama integration, Cross-Encoder reranking, RAG prompts  
 - core/processor.py:
   - Orchestrates file processing and text extraction.
 - core/database.py:
@@ -120,7 +150,7 @@ References (permalinks):
 - [worker.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/worker.py)  
 - [config.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/config.py)  
 - [core/classifier.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/classifier.py)  
-- [core/core/llm.py (heuristics)](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/core/llm.py)  
+- [core/llm.py (heuristics)](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/llm.py)  
 - [scripts/maintenance/verify_index.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/scripts/maintenance/verify_index.py)  
 - [debug_chroma.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/debug_chroma.py)  
 - [scripts/reingest_log.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/scripts/reingest_log.py)
@@ -440,6 +470,25 @@ Notes:
 - 404 commonly indicates unindexed files or incorrect paths (Windows path normalization issues mentioned in roadmap).
 - 503/504 often imply Redis/Memurai or Ollama not running, or Celery worker not consuming tasks.
 
+### Common First-Time Setup Issues
+
+| Issue | Symptom | Solution |
+|-------|---------|----------|
+| **Files not processing** | Files stay in `data/incoming/` | Verify all 3 terminals are running (server + celery worker + watcher) |
+| **Redis connection error** | Worker fails to start | Run `memurai-cli` (Windows) or `redis-cli ping` to verify Redis is running |
+| **No LLM response** | Chat returns errors | Verify `ollama list` shows `llama3.2` model |
+| **Import errors** | `ModuleNotFoundError: celery/redis` | Run `pip install celery redis eventlet` |
+| **Worker won't start (Windows)** | Celery errors on startup | Use `--pool=solo` flag or install `eventlet` |
+| **Port 5000 in use** | "Address already in use" | Change port in `config.py` or kill existing process |
+
+**Quick Health Check:**
+```bash
+# Verify all services
+redis-cli ping                    # Should return: PONG
+ollama list                        # Should show: llama3.2
+python -c "import celery, redis, chromadb; print('✅ All packages installed')"  
+```
+
 ---
 
 ## 12) Performance & Optimization
@@ -540,7 +589,7 @@ python debug_chroma.py
 - [worker.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/worker.py) — Celery tasks (duplicate detection, adaptive chunking, sorting).
 - [core/analytics.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/analytics.py) — Analytics and Redis caching.
 - [core/classifier.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/classifier.py) — Guardrails and keyword rules.
-- [core/core/llm.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/core/llm.py) — Content heuristics and category scoring.
+- [core/llm.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/core/llm.py) — LLM integration, Cross-Encoder reranking, content heuristics
 - [scripts/maintenance/verify_index.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/scripts/maintenance/verify_index.py) — ChromaDB sampling.
 - [debug_chroma.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/debug_chroma.py) — ChromaDB count and retrieval by filename.
 - [scripts/reingest_log.py](https://github.com/combox1234/DocuMind-AI-final/blob/35310f98c03ebb960eeb8b561bd33e6d25c9e72b/scripts/reingest_log.py) — Re-ingestion workflow demo.
